@@ -378,11 +378,13 @@ export default function PosApp() {
                           }
                           onClick={() => setViewDay(s.day)}
                         >
-                          <span className="sales-day-item-when">
-                            {s.day === today ? "วันนี้" : formatDayShort(s.day)}
-                          </span>
-                          <span className="sales-day-item-count">
-                            {s.count} บิล
+                          <span className="sales-day-item-top">
+                            <span className="sales-day-item-when">
+                              {s.day === today ? "วันนี้" : formatDayShort(s.day)}
+                            </span>
+                            <span className="sales-day-item-count">
+                              {s.count} บิล
+                            </span>
                           </span>
                           <span className="sales-day-item-total">
                             {formatSickles(s.total)}
@@ -402,7 +404,7 @@ export default function PosApp() {
                   </div>
                 )}
                 <label className="sales-day-other">
-                  <span>เลือกวันอื่น</span>
+                  <span className="sales-day-other-text">เลือกวันอื่น</span>
                   <input
                     type="date"
                     value={viewDay}
