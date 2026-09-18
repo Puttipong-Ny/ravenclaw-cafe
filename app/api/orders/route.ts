@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import {
   bangkokDayBounds,
+  bangkokDayKey,
+  isDayKey,
   type OrderLine,
   type SavedOrder,
 } from "@/lib/orders";
@@ -39,7 +41,13 @@ function toSaved(doc: OrderDoc): SavedOrder {
   };
 }
 
-export async function GET() {
+function dayFromRequest(request: Request): string {
+  const raw = new URL(request.url).searchParams.get("day");
+  if (raw && isDayKey(raw)) return raw;
+  return bangkokDayKey();
+}
+
+export async function GET(request: Request) {
   if (!process.env.MONGODB_URI) {
     return NextResponse.json(
       { error: "Missing MONGODB_URI" },
@@ -48,7 +56,8 @@ export async function GET() {
   }
 
   try {
-    const { start, end } = bangkokDayBounds();
+    const day = dayFromRequest(request);
+    const { start, end } = bangkokDayBounds(day);
     const db = await getDb();
     const docs = await db
       .collection<OrderDoc>("orders")
@@ -72,7 +81,7 @@ export async function GET() {
       .limit(100)
       .toArray();
 
-    return NextResponse.json({ orders: docs.map(toSaved) });
+    return NextResponse.json({ day, orders: docs.map(toSaved) });
   } catch (err) {
     console.error(err);
     return NextResponse.json({ error: "Failed to load orders" }, { status: 500 });
@@ -117,8 +126,8 @@ export async function POST(request: Request) {
   }
 }
 
-/** Clears today's orders (Bangkok day). */
-export async function DELETE() {
+/** Clears orders for the given Bangkok day (?day=YYYY-MM-DD), default today. */
+export async function DELETE(request: Request) {
   if (!process.env.MONGODB_URI) {
     return NextResponse.json(
       { error: "Missing MONGODB_URI" },
@@ -127,10 +136,11 @@ export async function DELETE() {
   }
 
   try {
-    const { start, end } = bangkokDayBounds();
+    const day = dayFromRequest(request);
+    const { start, end } = bangkokDayBounds(day);
     const db = await getDb();
     await db.collection("orders").deleteMany({ at: { $gte: start, $lte: end } });
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, day });
   } catch (err) {
     console.error(err);
     return NextResponse.json({ error: "Failed to clear orders" }, { status: 500 });

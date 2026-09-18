@@ -11,13 +11,25 @@ import {
   calcTotal,
   formatSickles,
 } from "@/lib/menu";
-import { summarizeOrders, type SavedOrder } from "@/lib/orders";
+import {
+  bangkokDayKey,
+  formatDayLabel,
+  formatDayShort,
+  summarizeOrders,
+  type SavedOrder,
+} from "@/lib/orders";
 
 type CartLine = {
   id: string;
   name: string;
   price: number;
   qty: number;
+};
+
+type DaySummary = {
+  day: string;
+  count: number;
+  total: number;
 };
 
 export default function PosApp() {
@@ -32,6 +44,10 @@ export default function PosApp() {
   const [customerName, setCustomerName] = useState("");
   const [staffName, setStaffName] = useState("");
   const [wipeConfirm, setWipeConfirm] = useState(false);
+  const [viewDay, setViewDay] = useState(bangkokDayKey);
+  const [daySummaries, setDaySummaries] = useState<DaySummary[]>([]);
+  const today = bangkokDayKey();
+  const isToday = viewDay === today;
 
   useEffect(() => {
     try {
@@ -41,9 +57,25 @@ export default function PosApp() {
     }
   }, []);
 
+  const refreshDays = useCallback(async () => {
+    try {
+      const res = await fetch("/api/orders/days", { cache: "no-store" });
+      const data = (await res.json()) as {
+        days?: DaySummary[];
+        error?: string;
+      };
+      if (!res.ok) return;
+      setDaySummaries(data.days ?? []);
+    } catch {
+      /* keep previous list */
+    }
+  }, []);
+
   const refreshOrders = useCallback(async () => {
     try {
-      const res = await fetch("/api/orders", { cache: "no-store" });
+      const res = await fetch(`/api/orders?day=${encodeURIComponent(viewDay)}`, {
+        cache: "no-store",
+      });
       const data = (await res.json()) as { orders?: SavedOrder[]; error?: string };
       if (!res.ok) {
         setError(data.error || "โหลดยอดไม่สำเร็จ");
@@ -67,20 +99,35 @@ export default function PosApp() {
     } finally {
       setReady(true);
     }
-  }, []);
+  }, [viewDay]);
+
+  useEffect(() => {
+    setWipeConfirm(false);
+    setOrders([]);
+    setReady(false);
+  }, [viewDay]);
+
+  useEffect(() => {
+    void refreshDays();
+  }, [refreshDays]);
 
   useEffect(() => {
     void refreshOrders();
 
     const onFocus = () => {
-      if (document.visibilityState === "visible") void refreshOrders();
+      if (document.visibilityState === "visible") {
+        void refreshOrders();
+        void refreshDays();
+      }
     };
     window.addEventListener("focus", onFocus);
     document.addEventListener("visibilitychange", onFocus);
 
-    // poll only while tab is visible — less churn than always-on 15s
     const timer = setInterval(() => {
-      if (document.visibilityState === "visible") void refreshOrders();
+      if (document.visibilityState === "visible") {
+        void refreshOrders();
+        void refreshDays();
+      }
     }, 30000);
 
     return () => {
@@ -88,7 +135,7 @@ export default function PosApp() {
       document.removeEventListener("visibilitychange", onFocus);
       clearInterval(timer);
     };
-  }, [refreshOrders]);
+  }, [refreshOrders, refreshDays]);
 
   const discount: Discount = {
     type: discountType,
@@ -98,6 +145,8 @@ export default function PosApp() {
   const discountAmt = calcDiscount(subtotal, discount);
   const total = calcTotal(subtotal, discount);
   const day = summarizeOrders(orders);
+  const allDaysTotal = daySummaries.reduce((sum, s) => sum + s.total, 0);
+  const allDaysCount = daySummaries.reduce((sum, s) => sum + s.count, 0);
 
   function addItem(item: MenuItem) {
     setPaidFlash(false);
@@ -162,7 +211,9 @@ export default function PosApp() {
       setDiscountType("none");
       setDiscountValue("");
       setCustomerName("");
-      await refreshOrders();
+      if (!isToday) setViewDay(bangkokDayKey());
+      else await refreshOrders();
+      await refreshDays();
     } catch {
       setError("บันทึกไม่สำเร็จ");
     } finally {
@@ -184,7 +235,10 @@ export default function PosApp() {
     setWipeConfirm(false);
     setBusy(true);
     try {
-      const res = await fetch("/api/orders", { method: "DELETE" });
+      const res = await fetch(
+        `/api/orders?day=${encodeURIComponent(viewDay)}`,
+        { method: "DELETE" },
+      );
       if (!res.ok) {
         const data = (await res.json()) as { error?: string };
         setError(data.error || "ล้างไม่สำเร็จ");
@@ -192,6 +246,7 @@ export default function PosApp() {
       }
       setOrders([]);
       setError(null);
+      await refreshDays();
     } catch {
       setError("ล้างไม่สำเร็จ");
     } finally {
@@ -280,68 +335,185 @@ export default function PosApp() {
             </div>
           ))}
 
-          {ready && day.orders.length > 0 && (
-            <div className="sales-log">
-              <div className="sales-log-head">
-                <h2 className="menu-set-title">บิลวันนี้</h2>
+          <div className="sales-log">
+            <div className="sales-log-head">
+              <h2 className="menu-set-title">ประวัติบิล</h2>
+              {daySummaries.length > 0 ? (
+                <div className="stat-pair" aria-label="สรุปรวมทุกวัน">
+                  <div className="stat-chip">
+                    <span className="stat-chip-label">วัน</span>
+                    <strong className="stat-chip-value">{daySummaries.length}</strong>
+                  </div>
+                  <div className="stat-chip stat-chip--accent">
+                    <span className="stat-chip-label">รวม</span>
+                    <strong className="stat-chip-value">
+                      {formatSickles(allDaysTotal)}
+                    </strong>
+                  </div>
+                </div>
+              ) : (
                 <span className="sales-log-meta">
-                  {day.count} บิล · {formatSickles(day.total)}
+                  {ready ? "ยังไม่มียอด" : "…"}
                 </span>
-              </div>
-              <ul className="sales-list">
-                {day.orders.map((o) => (
-                  <li key={o.id} className="sales-card">
-                    <div className="sales-card-top">
-                      <time className="sales-time" dateTime={o.at}>
-                        {new Date(o.at).toLocaleTimeString("th-TH", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </time>
-                      <strong className="sales-total">
-                        {formatSickles(o.total)}
-                      </strong>
-                    </div>
-
-                    {(o.customerName || o.staffName) && (
-                      <div className="sales-people">
-                        {o.customerName ? (
-                          <span className="sales-chip sales-chip--customer">
-                            <span className="sales-chip-label">ลูกค้า</span>
-                            {o.customerName}
-                          </span>
-                        ) : null}
-                        {o.staffName ? (
-                          <span className="sales-chip sales-chip--staff">
-                            <span className="sales-chip-label">โดย</span>
-                            {o.staffName}
-                          </span>
-                        ) : null}
-                      </div>
-                    )}
-
-                    <ul className="sales-lines">
-                      {o.lines.map((l) => (
-                        <li key={`${o.id}-${l.id}`}>
-                          <span className="sales-line-name">{l.name}</span>
-                          <span className="sales-line-qty">×{l.qty}</span>
-                          <span className="sales-line-sum">
-                            {formatSickles(l.price * l.qty)}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-
-                    {o.discountAmt > 0 && (
-                      <p className="sales-discount">
-                        ส่วนลด −{formatSickles(o.discountAmt)}
-                      </p>
-                    )}
-                  </li>
-                ))}
-              </ul>
+              )}
             </div>
-          )}
+
+            <div className="sales-workspace">
+              <nav className="sales-day-rail" aria-label="วันที่มียอด">
+                <p className="sales-day-rail-title">วันที่มียอด</p>
+                <div className="sales-day-rail-list">
+                  {daySummaries.length === 0 ? (
+                    <p className="sales-day-rail-empty">ยังไม่มีประวัติ</p>
+                  ) : (
+                    daySummaries.map((s) => {
+                      const active = s.day === viewDay;
+                      return (
+                        <button
+                          key={s.day}
+                          type="button"
+                          className={
+                            active
+                              ? "sales-day-item is-active"
+                              : "sales-day-item"
+                          }
+                          onClick={() => setViewDay(s.day)}
+                        >
+                          <span className="sales-day-item-when">
+                            {s.day === today ? "วันนี้" : formatDayShort(s.day)}
+                          </span>
+                          <span className="sales-day-item-count">
+                            {s.count} บิล
+                          </span>
+                          <span className="sales-day-item-total">
+                            {formatSickles(s.total)}
+                          </span>
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+                {daySummaries.length > 0 && (
+                  <div className="sum-card">
+                    <p className="sum-card-label">ยอดรวมทั้งหมด</p>
+                    <p className="sum-card-amount">
+                      {formatSickles(allDaysTotal)}
+                    </p>
+                    <p className="sum-card-sub">{allDaysCount} บิล</p>
+                  </div>
+                )}
+                <label className="sales-day-other">
+                  <span>เลือกวันอื่น</span>
+                  <input
+                    type="date"
+                    value={viewDay}
+                    max={today}
+                    onChange={(e) => {
+                      if (e.target.value) setViewDay(e.target.value);
+                    }}
+                  />
+                </label>
+              </nav>
+
+              <div className="sales-day-panel">
+                <div className="sales-day-panel-head">
+                  <div>
+                    <p className="sales-day-panel-kicker">
+                      {isToday ? "กำลังดู" : "ย้อนหลัง"}
+                    </p>
+                    <h3 className="sales-day-panel-title">
+                      {formatDayLabel(viewDay)}
+                    </h3>
+                  </div>
+                  <div className="sales-day-panel-actions">
+                    {ready ? (
+                      <div className="stat-pair" aria-label="สรุปวันที่เลือก">
+                        <div className="stat-chip">
+                          <span className="stat-chip-label">บิล</span>
+                          <strong className="stat-chip-value">{day.count}</strong>
+                        </div>
+                        <div className="stat-chip stat-chip--accent">
+                          <span className="stat-chip-label">ยอด</span>
+                          <strong className="stat-chip-value">
+                            {formatSickles(day.total)}
+                          </strong>
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="sales-day-panel-sum">…</span>
+                    )}
+                    {!isToday && (
+                      <button
+                        type="button"
+                        className="btn-ghost btn-ghost-sm"
+                        onClick={() => setViewDay(today)}
+                      >
+                        กลับวันนี้
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {!ready ? (
+                  <p className="sales-empty">กำลังโหลด…</p>
+                ) : day.orders.length === 0 ? (
+                  <p className="sales-empty">ไม่มีบิลในวันนี้</p>
+                ) : (
+                  <ul className="sales-list">
+                    {day.orders.map((o) => (
+                      <li key={o.id} className="sales-card">
+                        <div className="sales-card-top">
+                          <time className="sales-time" dateTime={o.at}>
+                            {new Date(o.at).toLocaleTimeString("th-TH", {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </time>
+                          <strong className="sales-total">
+                            {formatSickles(o.total)}
+                          </strong>
+                        </div>
+
+                        {(o.customerName || o.staffName) && (
+                          <div className="sales-people">
+                            {o.customerName ? (
+                              <span className="sales-chip sales-chip--customer">
+                                <span className="sales-chip-label">ลูกค้า</span>
+                                {o.customerName}
+                              </span>
+                            ) : null}
+                            {o.staffName ? (
+                              <span className="sales-chip sales-chip--staff">
+                                <span className="sales-chip-label">โดย</span>
+                                {o.staffName}
+                              </span>
+                            ) : null}
+                          </div>
+                        )}
+
+                        <ul className="sales-lines">
+                          {o.lines.map((l) => (
+                            <li key={`${o.id}-${l.id}`}>
+                              <span className="sales-line-name">{l.name}</span>
+                              <span className="sales-line-qty">×{l.qty}</span>
+                              <span className="sales-line-sum">
+                                {formatSickles(l.price * l.qty)}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+
+                        {o.discountAmt > 0 && (
+                          <p className="sales-discount">
+                            ส่วนลด −{formatSickles(o.discountAmt)}
+                          </p>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+          </div>
         </section>
 
         <aside className="cart-panel" aria-label="ตะกร้า">
@@ -477,22 +649,26 @@ export default function PosApp() {
             )}
           </div>
 
-          <dl className="totals">
-            <div className="totals-row">
-              <dt>ยอดรวม</dt>
-              <dd>{formatSickles(subtotal)}</dd>
-            </div>
-            {discountAmt > 0 && (
-              <div className="totals-row is-discount">
-                <dt>ส่วนลด</dt>
-                <dd>−{formatSickles(discountAmt)}</dd>
+          <div className="order-sum">
+            <div className="order-sum-rows">
+              <div className="order-sum-row">
+                <span>ยอดรวม</span>
+                <span>{formatSickles(subtotal)}</span>
               </div>
-            )}
-            <div className="totals-row is-total">
-              <dt>สุทธิ</dt>
-              <dd>{formatSickles(total)}</dd>
+              {discountAmt > 0 && (
+                <div className="order-sum-row is-discount">
+                  <span>ส่วนลด</span>
+                  <span>−{formatSickles(discountAmt)}</span>
+                </div>
+              )}
             </div>
-          </dl>
+            <div className="order-sum-net">
+              <span className="order-sum-net-label">สุทธิ</span>
+              <strong className="order-sum-net-value">
+                {formatSickles(total)}
+              </strong>
+            </div>
+          </div>
 
           <button
             type="button"
