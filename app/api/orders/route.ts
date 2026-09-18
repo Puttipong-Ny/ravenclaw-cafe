@@ -52,8 +52,24 @@ export async function GET() {
     const db = await getDb();
     const docs = await db
       .collection<OrderDoc>("orders")
-      .find({ at: { $gte: start, $lte: end } })
+      .find(
+        { at: { $gte: start, $lte: end } },
+        {
+          projection: {
+            id: 1,
+            at: 1,
+            lines: 1,
+            subtotal: 1,
+            discount: 1,
+            discountAmt: 1,
+            total: 1,
+            customerName: 1,
+            staffName: 1,
+          },
+        },
+      )
       .sort({ at: -1 })
+      .limit(100)
       .toArray();
 
     return NextResponse.json({ orders: docs.map(toSaved) });

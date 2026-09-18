@@ -43,13 +43,24 @@ export default function PosApp() {
 
   const refreshOrders = useCallback(async () => {
     try {
-      const res = await fetch("/api/orders");
+      const res = await fetch("/api/orders", { cache: "no-store" });
       const data = (await res.json()) as { orders?: SavedOrder[]; error?: string };
       if (!res.ok) {
         setError(data.error || "โหลดยอดไม่สำเร็จ");
         return;
       }
-      setOrders(data.orders ?? []);
+      const next = data.orders ?? [];
+      setOrders((prev) => {
+        if (
+          prev.length === next.length &&
+          prev.every(
+            (o, i) => o.id === next[i]?.id && o.total === next[i]?.total,
+          )
+        ) {
+          return prev;
+        }
+        return next;
+      });
       setError(null);
     } catch {
       setError("เชื่อมต่อเซิร์ฟเวอร์ไม่ได้");
@@ -60,11 +71,21 @@ export default function PosApp() {
 
   useEffect(() => {
     void refreshOrders();
-    const onFocus = () => void refreshOrders();
+
+    const onFocus = () => {
+      if (document.visibilityState === "visible") void refreshOrders();
+    };
     window.addEventListener("focus", onFocus);
-    const timer = setInterval(() => void refreshOrders(), 15000);
+    document.addEventListener("visibilitychange", onFocus);
+
+    // poll only while tab is visible — less churn than always-on 15s
+    const timer = setInterval(() => {
+      if (document.visibilityState === "visible") void refreshOrders();
+    }, 30000);
+
     return () => {
       window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
       clearInterval(timer);
     };
   }, [refreshOrders]);

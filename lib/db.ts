@@ -11,13 +11,14 @@ function getClientPromise(): Promise<MongoClient> {
   if (!uri) {
     throw new Error("Missing MONGODB_URI");
   }
-  if (process.env.NODE_ENV === "development") {
-    if (!global._mongoClientPromise) {
-      global._mongoClientPromise = new MongoClient(uri).connect();
-    }
-    return global._mongoClientPromise;
+  // Reuse one connection across hot reloads / warm serverless invocations
+  if (!global._mongoClientPromise) {
+    global._mongoClientPromise = new MongoClient(uri, {
+      maxPoolSize: 5,
+      serverSelectionTimeoutMS: 5000,
+    }).connect();
   }
-  return new MongoClient(uri).connect();
+  return global._mongoClientPromise;
 }
 
 export async function getDb(): Promise<Db> {
