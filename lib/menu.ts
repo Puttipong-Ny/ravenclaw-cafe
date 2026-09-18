@@ -18,37 +18,15 @@ export const MENU_SETS: MenuSet[] = [
     name: "เซ็ต",
     items: [
       {
-        id: "set-espresso-sandwich",
-        name: "Espresso + Sandwich",
-        detail: "เครื่องดื่ม + อาหาร",
-        price: 140,
+        id: "fairy-tale",
+        name: "Fairy Tale",
+        price: 300,
       },
       {
-        id: "set-latte-cookie",
-        name: "Latte + Cookie",
-        detail: "เครื่องดื่ม + ของหวาน",
-        price: 110,
+        id: "magic-tale",
+        name: "Magic Tale",
+        price: 300,
       },
-    ],
-  },
-  {
-    id: "drinks",
-    name: "เครื่องดื่ม",
-    items: [
-      { id: "espresso", name: "Espresso", price: 55 },
-      { id: "americano", name: "Americano", price: 60 },
-      { id: "latte", name: "Latte", price: 75 },
-      { id: "matcha", name: "Matcha Latte", price: 85 },
-    ],
-  },
-  {
-    id: "food",
-    name: "อาหาร",
-    items: [
-      { id: "croissant", name: "Croissant", price: 65 },
-      { id: "sandwich", name: "Sandwich", price: 95 },
-      { id: "brownie", name: "Brownie", price: 55 },
-      { id: "cookie", name: "Cookie", price: 45 },
     ],
   },
 ];
@@ -78,6 +56,6 @@ export function calcTotal(subtotal: number, discount: Discount): number {
   return Math.max(0, subtotal - calcDiscount(subtotal, discount));
 }
 
-export function formatBaht(n: number): string {
-  return `฿${n.toLocaleString("th-TH")}`;
+export function formatSickles(n: number): string {
+  return `${n.toLocaleString("en-US")} Sickles`;
 }
