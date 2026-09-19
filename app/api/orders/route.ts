@@ -7,7 +7,13 @@ import {
   type OrderLine,
   type SavedOrder,
 } from "@/lib/orders";
-import type { Discount } from "@/lib/menu";
+import {
+  buildTrustedLines,
+  calcDiscount,
+  calcTotal,
+  parseDiscount,
+  type Discount,
+} from "@/lib/menu";
 
 type OrderDoc = {
   id: string;
@@ -19,6 +25,7 @@ type OrderDoc = {
   total: number;
   customerName?: string;
   staffName?: string;
+  voided?: boolean;
 };
 
 function cleanName(value: unknown): string | undefined {
@@ -38,6 +45,7 @@ function toSaved(doc: OrderDoc): SavedOrder {
     total: doc.total,
     customerName: doc.customerName,
     staffName: doc.staffName,
+    voided: doc.voided || undefined,
   };
 }
 
@@ -74,11 +82,12 @@ export async function GET(request: Request) {
             total: 1,
             customerName: 1,
             staffName: 1,
+            voided: 1,
           },
         },
       )
       .sort({ at: -1 })
-      .limit(100)
+      .limit(200)
       .toArray();
 
     return NextResponse.json({ day, orders: docs.map(toSaved) });
@@ -97,22 +106,30 @@ export async function POST(request: Request) {
   }
 
   try {
-    const body = (await request.json()) as Partial<SavedOrder>;
-    if (!Array.isArray(body.lines) || body.lines.length === 0) {
-      return NextResponse.json({ error: "Empty order" }, { status: 400 });
-    }
-    if (typeof body.total !== "number" || typeof body.subtotal !== "number") {
-      return NextResponse.json({ error: "Invalid totals" }, { status: 400 });
+    const body = (await request.json()) as {
+      lines?: unknown;
+      discount?: unknown;
+      customerName?: unknown;
+      staffName?: unknown;
+    };
+
+    const built = buildTrustedLines(body.lines);
+    if ("error" in built) {
+      return NextResponse.json({ error: built.error }, { status: 400 });
     }
 
+    const discount = parseDiscount(body.discount);
+    const discountAmt = calcDiscount(built.subtotal, discount);
+    const total = calcTotal(built.subtotal, discount);
+
     const order: OrderDoc = {
-      id: body.id || `${Date.now()}`,
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       at: new Date(),
-      lines: body.lines,
-      subtotal: body.subtotal,
-      discount: body.discount ?? { type: "none", value: 0 },
-      discountAmt: body.discountAmt ?? 0,
-      total: body.total,
+      lines: built.lines,
+      subtotal: built.subtotal,
+      discount,
+      discountAmt,
+      total,
       customerName: cleanName(body.customerName),
       staffName: cleanName(body.staffName),
     };
@@ -126,7 +143,10 @@ export async function POST(request: Request) {
   }
 }
 
-/** Clears orders for the given Bangkok day (?day=YYYY-MM-DD), default today. */
+/**
+ * DELETE ?id=xxx  → soft-void one bill
+ * DELETE ?day=YYYY-MM-DD → wipe that Bangkok day
+ */
 export async function DELETE(request: Request) {
   if (!process.env.MONGODB_URI) {
     return NextResponse.json(
@@ -136,9 +156,23 @@ export async function DELETE(request: Request) {
   }
 
   try {
+    const url = new URL(request.url);
+    const id = url.searchParams.get("id");
+    const db = await getDb();
+
+    if (id) {
+      const result = await db.collection<OrderDoc>("orders").updateOne(
+        { id, voided: { $ne: true } },
+        { $set: { voided: true } },
+      );
+      if (result.matchedCount === 0) {
+        return NextResponse.json({ error: "Order not found" }, { status: 404 });
+      }
+      return NextResponse.json({ ok: true, id, voided: true });
+    }
+
     const day = dayFromRequest(request);
     const { start, end } = bangkokDayBounds(day);
-    const db = await getDb();
     await db.collection("orders").deleteMany({ at: { $gte: start, $lte: end } });
     return NextResponse.json({ ok: true, day });
   } catch (err) {

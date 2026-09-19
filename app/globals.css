@@ -103,44 +103,102 @@ button:disabled {
   color: var(--bronze-deep);
 }
 
-.btn-ghost {
-  border: 1px solid var(--line);
-  background: #fff;
-  color: var(--ink-soft);
-  padding: 0.6rem 1rem;
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-height: 2.55rem;
+  padding: 0.55rem 0.95rem;
   border-radius: 0.65rem;
-  font-weight: 600;
+  border: 1px solid transparent;
+  font: inherit;
+  font-weight: 700;
+  font-size: 0.9rem;
+  line-height: 1.2;
+  cursor: pointer;
   transition:
     background 0.15s ease,
     border-color 0.15s ease,
-    color 0.15s ease;
+    color 0.15s ease,
+    transform 0.12s ease,
+    box-shadow 0.15s ease;
 }
 
-.btn-ghost-sm {
-  padding: 0.45rem 0.75rem;
-  font-size: 0.85rem;
+.btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
 }
 
-.btn-ghost:hover {
-  background: #fff;
-  border-color: var(--bronze);
-  color: var(--ink);
-}
-
-.btn-ghost:active {
+.btn:active:not(:disabled) {
   transform: scale(0.98);
 }
 
-.btn-danger {
-  background: color-mix(in srgb, var(--danger) 12%, white);
-  border-color: color-mix(in srgb, var(--danger) 45%, var(--line));
+.btn:focus-visible {
+  outline: 2px solid var(--bronze);
+  outline-offset: 2px;
+}
+
+.btn-sm {
+  min-height: 2.2rem;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.82rem;
+  border-radius: 0.55rem;
+}
+
+.btn-secondary {
+  border-color: var(--line);
+  background: #fff;
+  color: var(--ink-soft);
+  box-shadow: 0 1px 2px rgba(10, 31, 56, 0.04);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  border-color: var(--bronze);
+  color: var(--ink);
+  background: #fff;
+}
+
+.btn-danger-soft {
+  width: 100%;
+  margin-top: 0.7rem;
+  border-color: color-mix(in srgb, var(--danger) 32%, var(--line));
+  background: color-mix(in srgb, var(--danger) 8%, white);
   color: var(--danger);
 }
 
-.btn-danger:hover {
-  background: color-mix(in srgb, var(--danger) 18%, white);
+.btn-danger-soft:hover:not(:disabled) {
   border-color: var(--danger);
-  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 14%, white);
+}
+
+.btn-danger-solid {
+  border-color: var(--danger);
+  background: var(--danger);
+  color: #fff;
+  box-shadow: 0 6px 14px color-mix(in srgb, var(--danger) 28%, transparent);
+}
+
+.btn-danger-solid:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--danger) 88%, black);
+  border-color: color-mix(in srgb, var(--danger) 88%, black);
+}
+
+.confirm-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.45rem;
+  align-items: stretch;
+}
+
+.confirm-pair--block {
+  width: 100%;
+  margin-top: 0.7rem;
+}
+
+.confirm-pair .btn {
+  width: 100%;
+  min-height: 2.65rem;
 }
 
 .header-actions {
@@ -148,6 +206,10 @@ button:disabled {
   align-items: center;
   gap: 0.45rem;
   flex-shrink: 0;
+}
+
+.header-actions .confirm-pair {
+  min-width: 11.5rem;
 }
 
 .pos-error {
@@ -709,6 +771,17 @@ button:disabled {
   border: 1px solid var(--line-soft);
 }
 
+.sales-card.is-voided {
+  opacity: 0.55;
+  background: color-mix(in srgb, var(--danger) 6%, white);
+  border-style: dashed;
+}
+
+.sales-card.is-voided .sales-total {
+  color: var(--danger);
+  font-size: 0.95rem;
+}
+
 .sales-card:hover {
   border-color: color-mix(in srgb, var(--bronze) 45%, var(--line));
 }
@@ -1189,5 +1262,110 @@ button:disabled {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* —— Mobile / tablet POS —— */
+@media (max-width: 959px) {
+  .pos-shell {
+    gap: 0.85rem;
+    padding: 0.85rem 0.75rem 1.75rem;
+    width: 100%;
+  }
+
+  .pos-header {
+    align-items: center;
+  }
+
+  .brand-logo {
+    width: 3.4rem;
+  }
+
+  .pos-brand {
+    font-size: 1.4rem;
+  }
+
+  .pos-title {
+    font-size: 0.68rem;
+    letter-spacing: 0.14em;
+  }
+
+  .pos-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+  }
+
+  /* Cart first for cashier flow on phones/tablets */
+  .cart-panel {
+    order: -1;
+    position: sticky;
+    top: 0.5rem;
+    z-index: 30;
+    padding: 1rem;
+    border-radius: 1rem;
+  }
+
+  .menu-panel {
+    order: 0;
+    gap: 1.1rem;
+  }
+
+  .menu-grid--sets {
+    max-width: none;
+  }
+
+  .menu-btn,
+  .menu-btn--set {
+    min-height: 4.75rem;
+  }
+
+  .qty-btn {
+    width: 2.55rem;
+    height: 2.55rem;
+    font-size: 1.25rem;
+  }
+
+  .pay-btn {
+    padding: 1.1rem 1rem;
+    font-size: 1.1rem;
+  }
+
+  .sales-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .sales-day-rail {
+    border-right: none;
+    border-bottom: 1px solid var(--line-soft);
+  }
+
+  .sales-list {
+    max-height: min(50vh, 380px);
+  }
+
+  .name-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .header-actions .btn {
+    padding: 0.5rem 0.7rem;
+    font-size: 0.82rem;
+    min-height: 2.35rem;
+  }
+
+  .header-actions .confirm-pair {
+    min-width: 10rem;
+  }
+}
+
+@media (min-width: 600px) and (max-width: 959px) {
+  .name-fields {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .menu-btn,
+  .menu-btn--set {
+    min-height: 5.25rem;
   }
 }

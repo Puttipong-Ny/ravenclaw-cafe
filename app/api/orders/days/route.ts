@@ -20,6 +20,7 @@ export async function GET() {
     const rows = await db
       .collection("orders")
       .aggregate<{ _id: string; count: number; total: number }>([
+        { $match: { voided: { $ne: true } } },
         {
           $group: {
             _id: {

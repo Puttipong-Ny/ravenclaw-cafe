@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Fraunces, Source_Sans_3 } from "next/font/google";
 import "./globals.css";
 
@@ -16,6 +16,12 @@ const sans = Source_Sans_3({
 export const metadata: Metadata = {
   title: "Ravenclaw Cafe · POS",
   description: "Point of sale for Ravenclaw Cafe",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({

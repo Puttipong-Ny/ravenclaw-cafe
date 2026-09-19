@@ -19,6 +19,8 @@ export type SavedOrder = {
   customerName?: string;
   /** Optional — cashier / staff name */
   staffName?: string;
+  /** Soft-cancelled bill */
+  voided?: boolean;
 };
 
 /** Bangkok calendar day YYYY-MM-DD */
@@ -78,9 +80,10 @@ export function formatDayShort(day: string): string {
 }
 
 export function summarizeOrders(orders: SavedOrder[]) {
+  const active = orders.filter((o) => !o.voided);
   return {
-    count: orders.length,
-    total: orders.reduce((sum, o) => sum + o.total, 0),
+    count: active.length,
+    total: active.reduce((sum, o) => sum + o.total, 0),
     orders,
   };
 }

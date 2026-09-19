@@ -44,6 +44,7 @@ export default function PosApp() {
   const [customerName, setCustomerName] = useState("");
   const [staffName, setStaffName] = useState("");
   const [wipeConfirm, setWipeConfirm] = useState(false);
+  const [voidConfirmId, setVoidConfirmId] = useState<string | null>(null);
   const [viewDay, setViewDay] = useState(bangkokDayKey);
   const [daySummaries, setDaySummaries] = useState<DaySummary[]>([]);
   const today = bangkokDayKey();
@@ -86,7 +87,10 @@ export default function PosApp() {
         if (
           prev.length === next.length &&
           prev.every(
-            (o, i) => o.id === next[i]?.id && o.total === next[i]?.total,
+            (o, i) =>
+              o.id === next[i]?.id &&
+              o.total === next[i]?.total &&
+              !!o.voided === !!next[i]?.voided,
           )
         ) {
           return prev;
@@ -103,9 +107,16 @@ export default function PosApp() {
 
   useEffect(() => {
     setWipeConfirm(false);
+    setVoidConfirmId(null);
     setOrders([]);
     setReady(false);
   }, [viewDay]);
+
+  useEffect(() => {
+    if (!voidConfirmId) return;
+    const timer = setTimeout(() => setVoidConfirmId(null), 4000);
+    return () => clearTimeout(timer);
+  }, [voidConfirmId]);
 
   useEffect(() => {
     void refreshDays();
@@ -185,11 +196,8 @@ export default function PosApp() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          lines: cart,
-          subtotal,
+          lines: cart.map((l) => ({ id: l.id, qty: l.qty })),
           discount,
-          discountAmt,
-          total,
           customerName: customerName.trim() || undefined,
           staffName: staffName.trim() || undefined,
         }),
@@ -254,6 +262,35 @@ export default function PosApp() {
     }
   }
 
+  async function voidOrder(orderId: string) {
+    if (voidConfirmId !== orderId) {
+      setVoidConfirmId(orderId);
+      return;
+    }
+    setVoidConfirmId(null);
+    setBusy(true);
+    try {
+      const res = await fetch(
+        `/api/orders?id=${encodeURIComponent(orderId)}`,
+        { method: "DELETE" },
+      );
+      if (!res.ok) {
+        const data = (await res.json()) as { error?: string };
+        setError(data.error || "ยกเลิกบิลไม่สำเร็จ");
+        return;
+      }
+      setOrders((prev) =>
+        prev.map((o) => (o.id === orderId ? { ...o, voided: true } : o)),
+      );
+      await refreshDays();
+      setError(null);
+    } catch {
+      setError("ยกเลิกบิลไม่สำเร็จ");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   const itemCount = cart.reduce((sum, line) => sum + line.qty, 0);
 
   return (
@@ -274,24 +311,35 @@ export default function PosApp() {
           </div>
         </div>
         <div className="header-actions">
-          {wipeConfirm && (
+          {wipeConfirm ? (
+            <div className="confirm-pair">
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setWipeConfirm(false)}
+                disabled={busy}
+              >
+                ไม่ล้าง
+              </button>
+              <button
+                type="button"
+                className="btn btn-danger-solid"
+                onClick={() => void wipeSales()}
+                disabled={busy}
+              >
+                ยืนยัน
+              </button>
+            </div>
+          ) : (
             <button
               type="button"
-              className="btn-ghost"
-              onClick={() => setWipeConfirm(false)}
-              disabled={busy}
+              className="btn btn-secondary"
+              onClick={() => void wipeSales()}
+              disabled={!ready || busy || orders.length === 0}
             >
-              ยกเลิก
+              ล้างประวัติ
             </button>
           )}
-          <button
-            type="button"
-            className={wipeConfirm ? "btn-ghost btn-danger" : "btn-ghost"}
-            onClick={() => void wipeSales()}
-            disabled={!ready || busy || orders.length === 0}
-          >
-            {wipeConfirm ? "ยืนยันล้างประวัติ" : "ล้างประวัติ"}
-          </button>
         </div>
       </header>
 
@@ -446,7 +494,7 @@ export default function PosApp() {
                     {!isToday && (
                       <button
                         type="button"
-                        className="btn-ghost btn-ghost-sm"
+                        className="btn btn-secondary btn-sm"
                         onClick={() => setViewDay(today)}
                       >
                         กลับวันนี้
@@ -462,7 +510,10 @@ export default function PosApp() {
                 ) : (
                   <ul className="sales-list">
                     {day.orders.map((o) => (
-                      <li key={o.id} className="sales-card">
+                      <li
+                        key={o.id}
+                        className={o.voided ? "sales-card is-voided" : "sales-card"}
+                      >
                         <div className="sales-card-top">
                           <time className="sales-time" dateTime={o.at}>
                             {new Date(o.at).toLocaleTimeString("th-TH", {
@@ -471,7 +522,7 @@ export default function PosApp() {
                             })}
                           </time>
                           <strong className="sales-total">
-                            {formatSickles(o.total)}
+                            {o.voided ? "ยกเลิกแล้ว" : formatSickles(o.total)}
                           </strong>
                         </div>
 
@@ -504,11 +555,42 @@ export default function PosApp() {
                           ))}
                         </ul>
 
-                        {o.discountAmt > 0 && (
+                        {o.discountAmt > 0 && !o.voided && (
                           <p className="sales-discount">
                             ส่วนลด −{formatSickles(o.discountAmt)}
                           </p>
                         )}
+
+                        {!o.voided &&
+                          (voidConfirmId === o.id ? (
+                            <div className="confirm-pair confirm-pair--block">
+                              <button
+                                type="button"
+                                className="btn btn-secondary"
+                                disabled={busy}
+                                onClick={() => setVoidConfirmId(null)}
+                              >
+                                ไม่ยกเลิก
+                              </button>
+                              <button
+                                type="button"
+                                className="btn btn-danger-solid"
+                                disabled={busy}
+                                onClick={() => void voidOrder(o.id)}
+                              >
+                                ยืนยัน
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              className="btn btn-danger-soft"
+                              disabled={busy}
+                              onClick={() => void voidOrder(o.id)}
+                            >
+                              ยกเลิกบิล
+                            </button>
+                          ))}
                       </li>
                     ))}
                   </ul>
@@ -527,7 +609,7 @@ export default function PosApp() {
               </span>
               <button
                 type="button"
-                className="btn-ghost btn-ghost-sm"
+                className="btn btn-secondary btn-sm"
                 onClick={clearOrder}
                 disabled={cart.length === 0 && !customerName && discountType === "none"}
               >
