@@ -18,6 +18,7 @@ import {
   summarizeOrders,
   type SavedOrder,
 } from "@/lib/orders";
+// import MoonbrewReceiptView from "@/components/MoonbrewReceiptView";
 
 type CartLine = {
   id: string;
@@ -47,6 +48,7 @@ export default function PosApp() {
   const [voidConfirmId, setVoidConfirmId] = useState<string | null>(null);
   const [viewDay, setViewDay] = useState(bangkokDayKey);
   const [daySummaries, setDaySummaries] = useState<DaySummary[]>([]);
+  // const [receiptOrder, setReceiptOrder] = useState<SavedOrder | null>(null);
   const today = bangkokDayKey();
   const isToday = viewDay === today;
 
@@ -294,6 +296,7 @@ export default function PosApp() {
   const itemCount = cart.reduce((sum, line) => sum + line.qty, 0);
 
   return (
+    <>
     <div className="pos-shell">
       <header className="pos-header">
         <div className="brand-block">
@@ -561,36 +564,45 @@ export default function PosApp() {
                           </p>
                         )}
 
-                        {!o.voided &&
-                          (voidConfirmId === o.id ? (
-                            <div className="confirm-pair confirm-pair--block">
+                        <div className="sales-card-actions">
+                          {/* <button
+                            type="button"
+                            className="btn btn-secondary btn-sm"
+                            onClick={() => setReceiptOrder(o)}
+                          >
+                            ใบเสร็จ
+                          </button> */}
+                          {!o.voided &&
+                            (voidConfirmId === o.id ? (
+                              <div className="confirm-pair">
+                                <button
+                                  type="button"
+                                  className="btn btn-secondary"
+                                  disabled={busy}
+                                  onClick={() => setVoidConfirmId(null)}
+                                >
+                                  ไม่ยกเลิก
+                                </button>
+                                <button
+                                  type="button"
+                                  className="btn btn-danger-solid"
+                                  disabled={busy}
+                                  onClick={() => void voidOrder(o.id)}
+                                >
+                                  ยืนยัน
+                                </button>
+                              </div>
+                            ) : (
                               <button
                                 type="button"
-                                className="btn btn-secondary"
-                                disabled={busy}
-                                onClick={() => setVoidConfirmId(null)}
-                              >
-                                ไม่ยกเลิก
-                              </button>
-                              <button
-                                type="button"
-                                className="btn btn-danger-solid"
+                                className="btn btn-danger-soft"
                                 disabled={busy}
                                 onClick={() => void voidOrder(o.id)}
                               >
-                                ยืนยัน
+                                ยกเลิกบิล
                               </button>
-                            </div>
-                          ) : (
-                            <button
-                              type="button"
-                              className="btn btn-danger-soft"
-                              disabled={busy}
-                              onClick={() => void voidOrder(o.id)}
-                            >
-                              ยกเลิกบิล
-                            </button>
-                          ))}
+                            ))}
+                        </div>
                       </li>
                     ))}
                   </ul>
@@ -765,5 +777,12 @@ export default function PosApp() {
         </aside>
       </div>
     </div>
+    {/* {receiptOrder ? (
+      <MoonbrewReceiptView
+        order={receiptOrder}
+        onClose={() => setReceiptOrder(null)}
+      />
+    ) : null} */}
+    </>
   );
 }
