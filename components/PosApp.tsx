@@ -6,10 +6,8 @@ import {
   type Discount,
   type DiscountType,
   type MenuItem,
-  calcDiscount,
-  calcSubtotal,
-  calcTotal,
   formatSickles,
+  tallyOrder,
 } from "@/lib/menu";
 import {
   bangkokDayKey,
@@ -154,9 +152,7 @@ export default function PosApp() {
     type: discountType,
     value: Number(discountValue) || 0,
   };
-  const subtotal = calcSubtotal(cart);
-  const discountAmt = calcDiscount(subtotal, discount);
-  const total = calcTotal(subtotal, discount);
+  const { subtotal, promo, extra, total } = tallyOrder(cart, discount);
   const day = summarizeOrders(orders);
   const allDaysTotal = daySummaries.reduce((sum, s) => sum + s.total, 0);
   const allDaysCount = daySummaries.reduce((sum, s) => sum + s.count, 0);
@@ -298,51 +294,49 @@ export default function PosApp() {
   return (
     <>
     <div className="pos-shell">
+      <div className="pos-grid">
+        <div className="pos-main">
       <header className="pos-header">
-        <div className="brand-block">
-          {/* plain img avoids Next image cache keeping an old opaque logo */}
-          <img
-            className="brand-logo"
-            src="/ravenclaw-crest.png"
-            alt="Ravenclaw"
-            width={96}
-            height={96}
-          />
-          <div>
-            <p className="pos-brand">Ravenclaw Cafe</p>
-            <h1 className="pos-title">Point of Sale</h1>
-          </div>
-        </div>
-        <div className="header-actions">
-          {wipeConfirm ? (
-            <div className="confirm-pair">
+        <img
+          className="brand-logo"
+          src="/ravencool-whisper-haven-logo.png"
+          alt="Ravencool Warmwhisper Haven"
+          width={1774}
+          height={887}
+        />
+        <div className="pos-header-bar">
+          <h1 className="pos-title">Point of Sale</h1>
+          <div className="header-actions">
+            {wipeConfirm ? (
+              <div className="confirm-pair">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setWipeConfirm(false)}
+                  disabled={busy}
+                >
+                  ไม่ล้าง
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-danger-solid"
+                  onClick={() => void wipeSales()}
+                  disabled={busy}
+                >
+                  ยืนยัน
+                </button>
+              </div>
+            ) : (
               <button
                 type="button"
                 className="btn btn-secondary"
-                onClick={() => setWipeConfirm(false)}
-                disabled={busy}
-              >
-                ไม่ล้าง
-              </button>
-              <button
-                type="button"
-                className="btn btn-danger-solid"
                 onClick={() => void wipeSales()}
-                disabled={busy}
+                disabled={!ready || busy || orders.length === 0}
               >
-                ยืนยัน
+                ล้างประวัติ
               </button>
-            </div>
-          ) : (
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => void wipeSales()}
-              disabled={!ready || busy || orders.length === 0}
-            >
-              ล้างประวัติ
-            </button>
-          )}
+            )}
+          </div>
         </div>
       </header>
 
@@ -352,7 +346,6 @@ export default function PosApp() {
         </p>
       )}
 
-      <div className="pos-grid">
         <section className="menu-panel" aria-label="เมนู">
           {MENU_SETS.map((set) => (
             <div key={set.id} className="menu-set">
@@ -611,6 +604,7 @@ export default function PosApp() {
             </div>
           </div>
         </section>
+        </div>
 
         <aside className="cart-panel" aria-label="ตะกร้า">
           <div className="cart-head">
@@ -751,10 +745,16 @@ export default function PosApp() {
                 <span>ยอดรวม</span>
                 <span>{formatSickles(subtotal)}</span>
               </div>
-              {discountAmt > 0 && (
+              {promo > 0 && (
+                <div className="order-sum-row is-discount">
+                  <span>ส่วนลด 3 Set Special</span>
+                  <span>−{formatSickles(promo)}</span>
+                </div>
+              )}
+              {extra > 0 && (
                 <div className="order-sum-row is-discount">
                   <span>ส่วนลด</span>
-                  <span>−{formatSickles(discountAmt)}</span>
+                  <span>−{formatSickles(extra)}</span>
                 </div>
               )}
             </div>

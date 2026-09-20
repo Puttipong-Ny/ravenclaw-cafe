@@ -18,14 +18,22 @@ export const MENU_SETS: MenuSet[] = [
     name: "เซ็ต",
     items: [
       {
-        id: "fairy-tale",
-        name: "Fairy Tale",
+        id: "set-a",
+        name: "Set A",
         price: 300,
+        detail: "Cupcake + Charm Tea",
       },
       {
-        id: "magic-tale",
-        name: "Magic Tale",
+        id: "set-b",
+        name: "Set B",
         price: 300,
+        detail: "Pudding + Fairy Tea",
+      },
+      {
+        id: "set-special",
+        name: "Set Special",
+        price: 3500,
+        detail: "Moon cake + Butter Beer · ซื้อ 3 = 10,000",
       },
     ],
   },
@@ -76,6 +84,33 @@ export function calcDiscount(subtotal: number, discount: Discount): number {
 
 export function calcTotal(subtotal: number, discount: Discount): number {
   return Math.max(0, subtotal - calcDiscount(subtotal, discount));
+}
+
+export const SPECIAL_SET_ID = "set-special";
+const SPECIAL_BUNDLE_QTY = 3;
+const SPECIAL_BUNDLE_PRICE = 10000;
+
+/** 500 off per 3 Set Special (3 × 3500 → 10000). */
+export function calcSetPromo(lines: { id: string; qty: number }[]): number {
+  const item = getMenuItem(SPECIAL_SET_ID);
+  if (!item) return 0;
+  const qty = lines.reduce(
+    (n, line) => (line.id === SPECIAL_SET_ID ? n + line.qty : n),
+    0,
+  );
+  const bundles = Math.floor(qty / SPECIAL_BUNDLE_QTY);
+  return bundles * (item.price * SPECIAL_BUNDLE_QTY - SPECIAL_BUNDLE_PRICE);
+}
+
+export function tallyOrder(
+  lines: { id: string; price: number; qty: number }[],
+  discount: Discount,
+) {
+  const subtotal = calcSubtotal(lines);
+  const promo = calcSetPromo(lines);
+  const extra = calcDiscount(subtotal - promo, discount);
+  const discountAmt = promo + extra;
+  return { subtotal, promo, extra, discountAmt, total: subtotal - discountAmt };
 }
 
 /** Build order lines + totals from menu catalog (server-trusted). */

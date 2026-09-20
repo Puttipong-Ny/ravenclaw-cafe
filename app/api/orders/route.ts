@@ -9,9 +9,8 @@ import {
 } from "@/lib/orders";
 import {
   buildTrustedLines,
-  calcDiscount,
-  calcTotal,
   parseDiscount,
+  tallyOrder,
   type Discount,
 } from "@/lib/menu";
 
@@ -119,17 +118,16 @@ export async function POST(request: Request) {
     }
 
     const discount = parseDiscount(body.discount);
-    const discountAmt = calcDiscount(built.subtotal, discount);
-    const total = calcTotal(built.subtotal, discount);
+    const tally = tallyOrder(built.lines, discount);
 
     const order: OrderDoc = {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       at: new Date(),
       lines: built.lines,
-      subtotal: built.subtotal,
+      subtotal: tally.subtotal,
       discount,
-      discountAmt,
-      total,
+      discountAmt: tally.discountAmt,
+      total: tally.total,
       customerName: cleanName(body.customerName),
       staffName: cleanName(body.staffName),
     };

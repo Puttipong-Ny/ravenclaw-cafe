@@ -14,8 +14,12 @@ const sans = Source_Sans_3({
 });
 
 export const metadata: Metadata = {
-  title: "Ravenclaw Cafe · POS",
-  description: "Point of sale for Ravenclaw Cafe",
+  title: "Ravencool Warmwhisper Haven · POS",
+  description: "Point of sale for Ravencool Warmwhisper Haven",
+  icons: {
+    icon: "/ravencool-whisper-haven-logo.png",
+    apple: "/ravencool-whisper-haven-logo.png",
+  },
 };
 
 export const viewport: Viewport = {
