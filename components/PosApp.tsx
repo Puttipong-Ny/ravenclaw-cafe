@@ -17,6 +17,7 @@ import {
   type SavedOrder,
 } from "@/lib/orders";
 // import MoonbrewReceiptView from "@/components/MoonbrewReceiptView";
+import RecipientSelect from "@/components/RecipientSelect";
 
 type CartLine = {
   id: string;
@@ -642,14 +643,7 @@ export default function PosApp() {
               <span>
                 ชื่อตัวเอง <em>(ไม่บังคับ)</em>
               </span>
-              <input
-                className="discount-input"
-                type="text"
-                autoComplete="nickname"
-                placeholder="เช่น Luna"
-                value={staffName}
-                onChange={(e) => setStaffName(e.target.value)}
-              />
+              <RecipientSelect value={staffName} onChange={setStaffName} />
             </label>
           </div>
 
