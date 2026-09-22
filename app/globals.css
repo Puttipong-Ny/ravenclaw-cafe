@@ -1061,6 +1061,56 @@ button:disabled {
   opacity: 0.7;
 }
 
+.recipient {
+  position: relative;
+}
+
+.recipient-list {
+  position: absolute;
+  z-index: 20;
+  left: 0;
+  right: 0;
+  top: calc(100% + 0.25rem);
+  margin: 0;
+  padding: 0.25rem;
+  list-style: none;
+  max-height: 12.5rem;
+  overflow: auto;
+  border-radius: 0.65rem;
+  border: 1px solid var(--line);
+  background: #fff;
+  box-shadow: var(--shadow-sm);
+}
+
+.recipient-option {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 650;
+  font-size: 0.92rem;
+  padding: 0.5rem 0.6rem;
+  border-radius: 0.45rem;
+}
+
+.recipient-option:hover,
+.recipient-option.is-active {
+  background: color-mix(in srgb, var(--bronze) 16%, white);
+  color: var(--ink);
+}
+
+.recipient-empty {
+  padding: 0.5rem 0.6rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--ink-soft);
+}
+
 .cart-empty {
   margin: 0;
   padding: 1.1rem 0.9rem;
@@ -1227,6 +1277,13 @@ button:disabled {
   outline: none;
   border-color: var(--bronze);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--bronze) 28%, transparent);
+}
+
+.name-field .discount-input {
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 0.95rem;
+  font-weight: 650;
 }
 
 .order-sum {
