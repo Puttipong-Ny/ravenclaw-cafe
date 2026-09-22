@@ -171,8 +171,20 @@ export async function DELETE(request: Request) {
 
     const day = dayFromRequest(request);
     const { start, end } = bangkokDayBounds(day);
-    await db.collection("orders").deleteMany({ at: { $gte: start, $lte: end } });
-    return NextResponse.json({ ok: true, day });
+    const query = { at: { $gte: start, $lte: end } };
+    const docs = await db.collection("orders").find(query).toArray();
+    if (docs.length > 0) {
+      const backedUpAt = new Date();
+      await db.collection("orders_backup").insertMany(
+        docs.map(({ _id: _omit, ...rest }) => ({
+          ...rest,
+          backedUpAt,
+          backupDay: day,
+        })),
+      );
+    }
+    await db.collection("orders").deleteMany(query);
+    return NextResponse.json({ ok: true, day, backedUp: docs.length });
   } catch (err) {
     console.error(err);
     return NextResponse.json({ error: "Failed to clear orders" }, { status: 500 });

@@ -248,9 +248,18 @@ button:disabled {
 }
 
 @media (min-width: 960px) {
+  .pos-shell {
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow: hidden;
+    padding-bottom: 1.1rem;
+  }
+
   .pos-grid {
     grid-template-columns: 1.4fr 0.88fr;
     align-items: start;
+    flex: 1;
+    min-height: 0;
   }
 
   .pos-main {
@@ -258,6 +267,37 @@ button:disabled {
     flex-direction: column;
     gap: 1.1rem;
     min-width: 0;
+    min-height: 0;
+    height: 100%;
+  }
+
+  .menu-panel {
+    flex: 1;
+    min-height: 0;
+  }
+
+  .sales-log {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .sales-workspace {
+    flex: 1;
+    min-height: 0;
+  }
+
+  .sales-day-rail,
+  .sales-day-panel {
+    min-height: 0;
+  }
+
+  .sales-day-rail-list,
+  .sales-list {
+    flex: 1;
+    min-height: 0;
+    max-height: none;
   }
 
   .cart-panel {
@@ -418,6 +458,7 @@ button:disabled {
   border-bottom: 1px solid var(--line-soft);
   background:
     linear-gradient(180deg, #fbfcfe 0%, #fff 100%);
+  flex-shrink: 0;
 }
 
 .sales-log-head .menu-set-title {
@@ -713,6 +754,7 @@ button:disabled {
   justify-content: space-between;
   gap: 0.75rem;
   flex-wrap: wrap;
+  flex-shrink: 0;
 }
 
 .sales-day-panel-kicker {
