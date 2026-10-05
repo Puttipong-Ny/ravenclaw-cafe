@@ -19,6 +19,8 @@ export type SavedOrder = {
   customerName?: string;
   /** Optional — cashier / staff name */
   staffName?: string;
+  /** Optional — table number */
+  tableNo?: string;
   /** Soft-cancelled bill */
   voided?: boolean;
 };

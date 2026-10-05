@@ -43,6 +43,7 @@ export default function PosApp() {
   const [busy, setBusy] = useState(false);
   const [customerName, setCustomerName] = useState("");
   const [staffName, setStaffName] = useState("");
+  const [tableNo, setTableNo] = useState("");
   const [wipeConfirm, setWipeConfirm] = useState(false);
   const [voidConfirmId, setVoidConfirmId] = useState<string | null>(null);
   const [viewDay, setViewDay] = useState(bangkokDayKey);
@@ -176,6 +177,7 @@ export default function PosApp() {
     setDiscountType("none");
     setDiscountValue("");
     setCustomerName("");
+    setTableNo("");
     setPaidFlash(false);
   }
 
@@ -191,6 +193,7 @@ export default function PosApp() {
           discount,
           customerName: customerName.trim() || undefined,
           staffName: staffName.trim() || undefined,
+          tableNo: tableNo.trim() || undefined,
         }),
       });
       const data = (await res.json()) as { error?: string };
@@ -203,6 +206,7 @@ export default function PosApp() {
       setDiscountType("none");
       setDiscountValue("");
       setCustomerName("");
+      setTableNo("");
       if (!isToday) setViewDay(bangkokDayKey());
       else await refreshOrders();
       await refreshDays();
@@ -511,8 +515,14 @@ export default function PosApp() {
                           </strong>
                         </div>
 
-                        {(o.customerName || o.staffName) && (
+                        {(o.customerName || o.staffName || o.tableNo) && (
                           <div className="sales-people">
+                            {o.tableNo ? (
+                              <span className="sales-chip sales-chip--table">
+                                <span className="sales-chip-label">โต๊ะ</span>
+                                {o.tableNo}
+                              </span>
+                            ) : null}
                             {o.customerName ? (
                               <span className="sales-chip sales-chip--customer">
                                 <span className="sales-chip-label">ลูกค้า</span>
@@ -606,7 +616,12 @@ export default function PosApp() {
                 type="button"
                 className="btn btn-secondary btn-sm"
                 onClick={clearOrder}
-                disabled={cart.length === 0 && !customerName && discountType === "none"}
+                disabled={
+                  cart.length === 0 &&
+                  !customerName &&
+                  !tableNo &&
+                  discountType === "none"
+                }
               >
                 ล้างออเดอร์
               </button>
@@ -614,6 +629,21 @@ export default function PosApp() {
           </div>
 
           <div className="name-fields">
+            <label className="name-field">
+              <span>
+                เลขโต๊ะ <em>(ไม่บังคับ)</em>
+              </span>
+              <input
+                className="discount-input"
+                type="text"
+                inputMode="numeric"
+                autoComplete="off"
+                placeholder="เช่น 7"
+                maxLength={12}
+                value={tableNo}
+                onChange={(e) => setTableNo(e.target.value)}
+              />
+            </label>
             <label className="name-field">
               <span>
                 ชื่อลูกค้า <em>(ไม่บังคับ)</em>

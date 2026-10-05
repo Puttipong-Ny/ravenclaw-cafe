@@ -24,6 +24,7 @@ type OrderDoc = {
   total: number;
   customerName?: string;
   staffName?: string;
+  tableNo?: string;
   voided?: boolean;
 };
 
@@ -44,6 +45,7 @@ function toSaved(doc: OrderDoc): SavedOrder {
     total: doc.total,
     customerName: doc.customerName,
     staffName: doc.staffName,
+    tableNo: doc.tableNo,
     voided: doc.voided || undefined,
   };
 }
@@ -81,6 +83,7 @@ export async function GET(request: Request) {
             total: 1,
             customerName: 1,
             staffName: 1,
+            tableNo: 1,
             voided: 1,
           },
         },
@@ -110,6 +113,7 @@ export async function POST(request: Request) {
       discount?: unknown;
       customerName?: unknown;
       staffName?: unknown;
+      tableNo?: unknown;
     };
 
     const built = buildTrustedLines(body.lines);
@@ -130,6 +134,7 @@ export async function POST(request: Request) {
       total: tally.total,
       customerName: cleanName(body.customerName),
       staffName: cleanName(body.staffName),
+      tableNo: cleanName(body.tableNo)?.slice(0, 12),
     };
 
     const db = await getDb();
