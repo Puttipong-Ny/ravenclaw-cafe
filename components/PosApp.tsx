@@ -7,6 +7,7 @@ import {
   type DiscountType,
   type MenuItem,
   formatSickles,
+  lineDetail,
   tallyOrder,
 } from "@/lib/menu";
 import {
@@ -44,6 +45,9 @@ export default function PosApp() {
   const [customerName, setCustomerName] = useState("");
   const [staffName, setStaffName] = useState("");
   const [tableNo, setTableNo] = useState("");
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [billPopup, setBillPopup] = useState<string | null>(null);
+  const [popupCopied, setPopupCopied] = useState(false);
   const [wipeConfirm, setWipeConfirm] = useState(false);
   const [voidConfirmId, setVoidConfirmId] = useState<string | null>(null);
   const [viewDay, setViewDay] = useState(bangkokDayKey);
@@ -172,6 +176,60 @@ export default function PosApp() {
     );
   }
 
+  function billText(o: {
+    voided?: boolean;
+    tableNo?: string;
+    customerName?: string;
+    staffName?: string;
+    lines: { id: string; name: string; qty: number }[];
+  }): string {
+    const tick = (value: string) => value.replaceAll("`", "'");
+    const who = [
+      o.voided ? "**ยกเลิกแล้ว**" : null,
+      o.tableNo ? `**โต๊ะ** \`${tick(o.tableNo)}\`` : null,
+      o.customerName ? `**ลูกค้า** \`${tick(o.customerName)}\`` : null,
+      o.staffName ? `**โดย** \`${tick(o.staffName)}\`` : null,
+    ].filter((line) => line !== null);
+    const items = o.lines.map((l) => {
+      const detail = lineDetail(l.id);
+      return detail
+        ? `- **${l.name}** ×${l.qty} — ${detail}`
+        : `- **${l.name}** ×${l.qty}`;
+    });
+    return [...who, ...(who.length && items.length ? [""] : []), ...items].join("\n");
+  }
+
+  async function copyBill(o: SavedOrder) {
+    try {
+      await navigator.clipboard.writeText(billText(o));
+      setCopiedId(o.id);
+      window.setTimeout(() => {
+        setCopiedId((current) => (current === o.id ? null : current));
+      }, 1500);
+    } catch {
+      setError("คัดลอกไม่สำเร็จ");
+    }
+  }
+
+  async function copyPopup() {
+    if (!billPopup) return;
+    try {
+      await navigator.clipboard.writeText(billPopup);
+      setPopupCopied(true);
+    } catch {
+      setError("คัดลอกไม่สำเร็จ");
+    }
+  }
+
+  useEffect(() => {
+    if (!billPopup) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setBillPopup(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [billPopup]);
+
   function clearOrder() {
     setCart([]);
     setDiscountType("none");
@@ -201,6 +259,15 @@ export default function PosApp() {
         setError(data.error || "บันทึกไม่สำเร็จ");
         return;
       }
+      setBillPopup(
+        billText({
+          tableNo: tableNo.trim() || undefined,
+          customerName: customerName.trim() || undefined,
+          staffName: staffName.trim() || undefined,
+          lines: cart,
+        }),
+      );
+      setPopupCopied(false);
       setPaidFlash(true);
       setCart([]);
       setDiscountType("none");
@@ -539,15 +606,23 @@ export default function PosApp() {
                         )}
 
                         <ul className="sales-lines">
-                          {o.lines.map((l) => (
-                            <li key={`${o.id}-${l.id}`}>
-                              <span className="sales-line-name">{l.name}</span>
-                              <span className="sales-line-qty">×{l.qty}</span>
-                              <span className="sales-line-sum">
-                                {formatSickles(l.price * l.qty)}
-                              </span>
-                            </li>
-                          ))}
+                          {o.lines.map((l) => {
+                            const detail = lineDetail(l.id);
+                            return (
+                              <li key={`${o.id}-${l.id}`}>
+                                <span className="sales-line-name">
+                                  {l.name}
+                                  {detail ? (
+                                    <span className="sales-line-detail">{detail}</span>
+                                  ) : null}
+                                </span>
+                                <span className="sales-line-qty">×{l.qty}</span>
+                                <span className="sales-line-sum">
+                                  {formatSickles(l.price * l.qty)}
+                                </span>
+                              </li>
+                            );
+                          })}
                         </ul>
 
                         {o.discountAmt > 0 && !o.voided && (
@@ -557,6 +632,13 @@ export default function PosApp() {
                         )}
 
                         <div className="sales-card-actions">
+                          <button
+                            type="button"
+                            className="btn btn-secondary btn-sm"
+                            onClick={() => void copyBill(o)}
+                          >
+                            {copiedId === o.id ? "คัดลอกแล้ว" : "คัดลอกบิล"}
+                          </button>
                           {/* <button
                             type="button"
                             className="btn btn-secondary btn-sm"
@@ -631,21 +713,6 @@ export default function PosApp() {
           <div className="name-fields">
             <label className="name-field">
               <span>
-                เลขโต๊ะ <em>(ไม่บังคับ)</em>
-              </span>
-              <input
-                className="discount-input"
-                type="text"
-                inputMode="numeric"
-                autoComplete="off"
-                placeholder="เช่น 7"
-                maxLength={12}
-                value={tableNo}
-                onChange={(e) => setTableNo(e.target.value)}
-              />
-            </label>
-            <label className="name-field">
-              <span>
                 ชื่อลูกค้า <em>(ไม่บังคับ)</em>
               </span>
               <input
@@ -662,6 +729,21 @@ export default function PosApp() {
                 ชื่อตัวเอง <em>(ไม่บังคับ)</em>
               </span>
               <RecipientSelect value={staffName} onChange={setStaffName} />
+            </label>
+            <label className="name-field">
+              <span>
+                เลขโต๊ะ <em>(ไม่บังคับ)</em>
+              </span>
+              <input
+                className="discount-input"
+                type="text"
+                inputMode="numeric"
+                autoComplete="off"
+                placeholder="เช่น 7"
+                maxLength={12}
+                value={tableNo}
+                onChange={(e) => setTableNo(e.target.value)}
+              />
             </label>
           </div>
 
@@ -789,6 +871,39 @@ export default function PosApp() {
         </aside>
       </div>
     </div>
+    {billPopup && (
+      <div className="bill-pop" onClick={() => setBillPopup(null)}>
+        <div
+          className="bill-pop-card"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="bill-pop-title"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <h2 id="bill-pop-title" className="bill-pop-title">
+            คัดลอกบิล
+          </h2>
+          <pre className="bill-pop-text">{billPopup}</pre>
+          <div className="bill-pop-actions">
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => setBillPopup(null)}
+            >
+              ปิด
+            </button>
+            <button
+              type="button"
+              className="btn bill-pop-copy"
+              autoFocus
+              onClick={() => void copyPopup()}
+            >
+              {popupCopied ? "คัดลอกแล้ว" : "คัดลอก"}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
     {/* {receiptOrder ? (
       <MoonbrewReceiptView
         order={receiptOrder}

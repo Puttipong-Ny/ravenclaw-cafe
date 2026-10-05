@@ -307,9 +307,39 @@ button:disabled {
   }
 
   .pos-shell.summary-shell {
-    height: auto;
-    max-height: none;
-    overflow: visible;
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow: hidden;
+  }
+
+  .summary-layout {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: 0.92fr 1.08fr;
+    align-items: stretch;
+    gap: 1.1rem;
+  }
+
+  .summary-shell .sales-log {
+    margin-top: 0;
+    min-height: 0;
+  }
+
+  .summary-shell .summary-grid,
+  .summary-shell .summary-bills {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+  }
+
+  .summary-shell .summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .summary-shell .summary-block + .summary-block {
+    border-left: none;
+    border-top: 1px solid var(--line-soft);
   }
 }
 
@@ -847,6 +877,7 @@ button:disabled {
   border-radius: 0.85rem;
   background: var(--snow);
   border: 1px solid var(--line-soft);
+  user-select: text;
 }
 
 .sales-card.is-voided {
@@ -961,14 +992,23 @@ button:disabled {
   display: grid;
   grid-template-columns: 1fr auto auto;
   gap: 0.55rem;
-  align-items: baseline;
+  align-items: start;
   font-size: 0.92rem;
 }
 
 .sales-line-name {
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
   color: var(--ink);
   font-weight: 600;
   min-width: 0;
+}
+
+.sales-line-detail {
+  font-size: 0.78rem;
+  font-weight: 650;
+  color: var(--ink-soft);
 }
 
 .sales-line-qty {
@@ -1058,6 +1098,10 @@ button:disabled {
 .name-fields {
   display: grid;
   gap: 0.65rem;
+}
+
+.name-fields .name-field:last-child {
+  grid-column: 1 / -1;
 }
 
 @media (min-width: 420px) {
@@ -1179,6 +1223,69 @@ button:disabled {
   color: var(--ok);
   font-weight: 700;
   animation: pulse-in 0.35s ease-out;
+}
+
+.bill-pop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: color-mix(in srgb, var(--ink) 42%, transparent);
+}
+
+.bill-pop-card {
+  width: min(26rem, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.05rem 1.1rem 1rem;
+  border-radius: 1rem;
+  background: #fff;
+  border: 1px solid var(--line-soft);
+  box-shadow: var(--shadow-sm);
+}
+
+.bill-pop-title {
+  margin: 0;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 1.2rem;
+  font-weight: 550;
+  color: var(--ink);
+}
+
+.bill-pop-text {
+  margin: 0;
+  max-height: min(46vh, 280px);
+  overflow: auto;
+  padding: 0.8rem 0.9rem;
+  border-radius: 0.75rem;
+  background: var(--snow);
+  border: 1px solid var(--line-soft);
+  white-space: pre-wrap;
+  font-family: inherit;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.bill-pop-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.bill-pop-actions .btn {
+  flex: 1;
+}
+
+.bill-pop-copy {
+  background: var(--ink);
+  color: #fff;
+  border-color: var(--ink);
+}
+
+.bill-pop-copy:hover:not(:disabled) {
+  filter: brightness(1.08);
 }
 
 .cart-list {
@@ -1585,6 +1692,11 @@ button:disabled {
   }
 }
 
+.summary-layout {
+  gap: 1.1rem;
+  min-width: 0;
+}
+
 .summary-grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -1637,6 +1749,22 @@ button:disabled {
 .summary-rows strong {
   font-variant-numeric: tabular-nums;
   color: var(--bronze-deep);
+}
+
+.summary-bills {
+  max-height: none;
+  padding: 1rem 1.15rem 1.2rem;
+}
+
+@media (max-width: 959px) {
+  .summary-shell {
+    padding-bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .summary-layout {
+    display: flex;
+    flex-direction: column;
+  }
 }
 
 /* —— Receipt overlay (Moonbrew iframe) — unused for now

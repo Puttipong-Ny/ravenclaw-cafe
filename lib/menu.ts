@@ -52,6 +52,12 @@ export function getMenuItem(id: string): MenuItem | undefined {
   return MENU_BY_ID.get(id);
 }
 
+/** Set contents for the bill, e.g. "Cupcake + Charm Tea". */
+export function lineDetail(id: string): string | undefined {
+  const parts = getMenuItem(id)?.contents;
+  return parts?.length ? parts.join(" + ") : undefined;
+}
+
 /** Set A → Cupcake and Charm Tea. Unknown items count as themselves. */
 export function lineContents(id: string, name: string): string[] {
   const parts = getMenuItem(id)?.contents;

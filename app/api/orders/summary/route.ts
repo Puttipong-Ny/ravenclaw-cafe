@@ -2,8 +2,6 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { lineContents } from "@/lib/menu";
 
-type Line = { id: string; name: string; qty: number };
-
 export async function GET() {
   if (!process.env.MONGODB_URI) {
     return NextResponse.json({ error: "Missing MONGODB_URI" }, { status: 503 });
@@ -12,11 +10,33 @@ export async function GET() {
   try {
     const db = await getDb();
     const docs = await db
-      .collection<{ lines: Line[]; total: number; voided?: boolean }>("orders")
+      .collection<{
+        id: string;
+        at: Date;
+        lines: { id: string; name: string; price: number; qty: number }[];
+        total: number;
+        discountAmt?: number;
+        customerName?: string;
+        staffName?: string;
+        tableNo?: string;
+      }>("orders")
       .find(
         { voided: { $ne: true } },
-        { projection: { lines: 1, total: 1 } },
+        {
+          projection: {
+            id: 1,
+            at: 1,
+            lines: 1,
+            total: 1,
+            discountAmt: 1,
+            customerName: 1,
+            staffName: 1,
+            tableNo: 1,
+          },
+        },
       )
+      .sort({ at: -1 })
+      .limit(400)
       .toArray();
 
     const products = new Map<string, number>();
@@ -45,6 +65,16 @@ export async function GET() {
       total,
       sets: byQty(sets),
       products: byQty(products),
+      orders: docs.map((doc) => ({
+        id: doc.id,
+        at: new Date(doc.at).toISOString(),
+        lines: doc.lines ?? [],
+        total: doc.total || 0,
+        discountAmt: doc.discountAmt || 0,
+        customerName: doc.customerName,
+        staffName: doc.staffName,
+        tableNo: doc.tableNo,
+      })),
     });
   } catch (err) {
     console.error(err);
