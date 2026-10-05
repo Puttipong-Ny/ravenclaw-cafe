@@ -5,6 +5,7 @@ import {
   calcSetPromo,
   calcSubtotal,
   calcTotal,
+  lineContents,
   parseDiscount,
   tallyOrder,
 } from "./menu";
@@ -54,5 +55,7 @@ const mixed = tallyOrder(
   { type: "none", value: 0 },
 );
 assert.equal(mixed.total, 10300);
+assert.deepEqual(lineContents("set-a", "Set A"), ["Cupcake", "Charm Tea"]);
+assert.deepEqual(lineContents("gone", "Fairy Tale"), ["Fairy Tale"]);
 
 console.log("menu calc ok");

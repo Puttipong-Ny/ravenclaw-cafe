@@ -59,11 +59,18 @@ export default function RecipientSelect({ value, onChange }: Props) {
         onChange={(e) => {
           setQuery(e.target.value);
           setOpen(true);
-          if (!e.target.value.trim()) onChange("");
         }}
         onFocus={() => setOpen(true)}
         onBlur={() => {
           setOpen(false);
+          const exact = RECIPIENTS.find(
+            (name) => name.toLowerCase() === query.trim().toLowerCase(),
+          );
+          if (exact) {
+            onChange(exact);
+            setQuery(exact);
+            return;
+          }
           setQuery(value);
         }}
       />

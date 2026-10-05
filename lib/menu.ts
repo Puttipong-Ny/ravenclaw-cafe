@@ -4,6 +4,8 @@ export type MenuItem = {
   price: number;
   /** Short line under the name, e.g. set contents */
   detail?: string;
+  /** Pieces counted separately on the summary page */
+  contents?: string[];
 };
 
 export type MenuSet = {
@@ -22,18 +24,21 @@ export const MENU_SETS: MenuSet[] = [
         name: "Set A",
         price: 300,
         detail: "Cupcake + Charm Tea",
+        contents: ["Cupcake", "Charm Tea"],
       },
       {
         id: "set-b",
         name: "Set B",
         price: 300,
         detail: "Pudding + Fairy Tea",
+        contents: ["Pudding", "Fairy Tea"],
       },
       {
         id: "set-special",
         name: "Set Special",
         price: 3500,
         detail: "Moon cake + Butter Beer · ซื้อ 3 = 10,000",
+        contents: ["Moon cake", "Butter Beer"],
       },
     ],
   },
@@ -45,6 +50,12 @@ const MENU_BY_ID = new Map(
 
 export function getMenuItem(id: string): MenuItem | undefined {
   return MENU_BY_ID.get(id);
+}
+
+/** Set A → Cupcake and Charm Tea. Unknown items count as themselves. */
+export function lineContents(id: string, name: string): string[] {
+  const parts = getMenuItem(id)?.contents;
+  return parts?.length ? parts : [name];
 }
 
 export type DiscountType = "none" | "percent" | "amount";

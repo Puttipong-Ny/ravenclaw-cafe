@@ -308,6 +308,9 @@ export default function PosApp() {
         <div className="pos-header-bar">
           <h1 className="pos-title">Point of Sale</h1>
           <div className="header-actions">
+            <a className="btn btn-secondary" href="/summary">
+              สรุปสินค้า
+            </a>
             {wipeConfirm ? (
               <div className="confirm-pair">
                 <button
