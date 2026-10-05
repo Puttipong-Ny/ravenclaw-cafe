@@ -69,8 +69,14 @@ export default function RecipientSelect({ value, onChange }: Props) {
         onFocus={() => setOpen(true)}
         onBlur={() => {
           setOpen(false);
+          const trimmed = query.trim();
+          if (!trimmed) {
+            onChange("");
+            setQuery("");
+            return;
+          }
           const exact = RECIPIENTS.find(
-            (name) => name.toLowerCase() === query.trim().toLowerCase(),
+            (name) => name.toLowerCase() === trimmed.toLowerCase(),
           );
           if (exact) {
             onChange(exact);
@@ -80,6 +86,21 @@ export default function RecipientSelect({ value, onChange }: Props) {
           setQuery(value);
         }}
       />
+      {(query || value) && (
+        <button
+          type="button"
+          className="recipient-clear"
+          aria-label="ลบชื่อตัวเอง"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => {
+            onChange("");
+            setQuery("");
+            setOpen(false);
+          }}
+        >
+          ×
+        </button>
+      )}
       {open && (
         <ul className="recipient-list" role="listbox">
           {matches.length === 0 ? (

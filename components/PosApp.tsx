@@ -51,14 +51,6 @@ export default function PosApp() {
   const today = bangkokDayKey();
   const isToday = viewDay === today;
 
-  useEffect(() => {
-    try {
-      setStaffName(localStorage.getItem("ravenclaw-staff-name") ?? "");
-    } catch {
-      /* ignore */
-    }
-  }, []);
-
   const refreshDays = useCallback(async () => {
     try {
       const res = await fetch("/api/orders/days", { cache: "no-store" });
@@ -205,13 +197,6 @@ export default function PosApp() {
       if (!res.ok) {
         setError(data.error || "บันทึกไม่สำเร็จ");
         return;
-      }
-      try {
-        if (staffName.trim()) {
-          localStorage.setItem("ravenclaw-staff-name", staffName.trim());
-        }
-      } catch {
-        /* ignore */
       }
       setPaidFlash(true);
       setCart([]);

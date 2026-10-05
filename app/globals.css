@@ -1072,6 +1072,30 @@ button:disabled {
   position: relative;
 }
 
+.recipient .discount-input {
+  padding-right: 2.2rem;
+}
+
+.recipient-clear {
+  position: absolute;
+  top: 50%;
+  right: 0.35rem;
+  transform: translateY(-50%);
+  width: 1.7rem;
+  height: 1.7rem;
+  border: 0;
+  border-radius: 0.4rem;
+  background: transparent;
+  color: var(--ink-soft);
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
+.recipient-clear:hover {
+  background: color-mix(in srgb, var(--fog) 70%, white);
+  color: var(--ink);
+}
+
 .recipient-list {
   position: absolute;
   z-index: 20;
