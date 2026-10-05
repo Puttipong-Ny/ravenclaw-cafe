@@ -3,20 +3,26 @@
 import { useMemo, useState } from "react";
 
 export const RECIPIENTS = [
-  "Kazuha Bloomfield",
-  "Deimos Lolivan",
-  "Peach Grimoire",
-  "Seralynn Musetia",
-  "Way Whal Wayne",
-  "Gemma Velestra Winterheart",
-  "Lim Shinyu",
-  "Celine Cayla",
-  "LiYin Nina Rosendahl",
   "Adelriana Fe Ferbulma",
-  "Robert Raymond",
-  "Mojiko Yellowtime",
   "Amin Ramirez",
+  "Arloid Deeney",
+  "Celine Cayla",
+  "Dagnis De Valence",
+  "Deimos Lolivan",
+  "Eric Alaric Moonnox",
+  "Gazelle Tataros Wayne",
+  "Gemma Velestra Winterheart",
+  "Jaymie Maccoille",
+  "Kazuha Bloomfield",
+  "Lim Shinyu",
+  "LiYin Nina Rosendahl",
+  "Mojiko Yellowtime",
+  "Peach Grimoire",
+  "Rachel Kaze",
+  "Robert Raymond",
+  "Seralynn Musetia",
   "Thames Aphroditemes",
+  "Way Whal Wayne",
 ] as const;
 
 type Props = {
