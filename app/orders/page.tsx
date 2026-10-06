@@ -39,6 +39,8 @@ export default function OrdersPage() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [staff, setStaff] = useState<StaffStatus[]>(() => staffBoard([]));
   const requestId = useRef(0);
+  // Bumped around a status save so an in-flight board reload can't restore the old value.
+  const staffEpoch = useRef(0);
   const today = bangkokDayKey();
 
   const refresh = useCallback(async () => {
@@ -69,9 +71,11 @@ export default function OrdersPage() {
   }, [day, name]);
 
   const refreshStaff = useCallback(async () => {
+    const epoch = staffEpoch.current;
     try {
       const res = await fetch("/api/staff", { cache: "no-store" });
       const data = (await res.json()) as { staff?: StaffStatus[] };
+      if (epoch !== staffEpoch.current) return;
       if (res.ok && data.staff) setStaff(data.staff);
     } catch {
       /* keep the last board */
@@ -82,7 +86,10 @@ export default function OrdersPage() {
     setLoaded(false);
     void refresh();
     void refreshStaff();
-    const onFocus = () => {
+    const onFocus = (event: Event) => {
+      // A button focus can bubble to window in some browsers; that reload
+      // races the click and paints the previous status.
+      if (event.type === "focus" && event.target !== window) return;
       if (document.visibilityState === "visible") {
         void refresh();
         void refreshStaff();
@@ -117,6 +124,8 @@ export default function OrdersPage() {
 
   async function setMyFree(free: boolean) {
     if (!name) return;
+    const epoch = ++staffEpoch.current;
+    const previous = staff.some((row) => row.name === name && row.free);
     setStaff((prev) =>
       prev.map((row) => (row.name === name ? { ...row, free } : row)),
     );
@@ -127,9 +136,18 @@ export default function OrdersPage() {
         body: JSON.stringify({ name, free }),
       });
       if (!res.ok) throw new Error("fail");
-    } catch {
+      if (epoch !== staffEpoch.current) return;
+      ++staffEpoch.current;
       setStaff((prev) =>
-        prev.map((row) => (row.name === name ? { ...row, free: !free } : row)),
+        prev.map((row) => (row.name === name ? { ...row, free } : row)),
+      );
+    } catch {
+      if (epoch !== staffEpoch.current) return;
+      ++staffEpoch.current;
+      setStaff((prev) =>
+        prev.map((row) =>
+          row.name === name ? { ...row, free: previous } : row,
+        ),
       );
       setError("บันทึกสถานะไม่สำเร็จ");
     }
