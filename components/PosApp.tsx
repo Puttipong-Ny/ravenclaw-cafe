@@ -19,6 +19,14 @@ import {
 } from "@/lib/orders";
 // import MoonbrewReceiptView from "@/components/MoonbrewReceiptView";
 import RecipientSelect from "@/components/RecipientSelect";
+import { useMyStaff } from "@/components/useMyStaff";
+import {
+  byGender,
+  GENDER_LABEL,
+  staffBoard,
+  type Gender,
+  type StaffStatus,
+} from "@/lib/staff";
 
 type CartLine = {
   id: string;
@@ -44,6 +52,8 @@ export default function PosApp() {
   const [busy, setBusy] = useState(false);
   const [customerName, setCustomerName] = useState("");
   const [staffName, setStaffName] = useState("");
+  const { name: me, role } = useMyStaff();
+  const [staff, setStaff] = useState<StaffStatus[]>(() => staffBoard([]));
   const [tableNo, setTableNo] = useState("");
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [billPopup, setBillPopup] = useState<string | null>(null);
@@ -53,6 +63,17 @@ export default function PosApp() {
   const [viewDay, setViewDay] = useState(bangkokDayKey);
   const [daySummaries, setDaySummaries] = useState<DaySummary[]>([]);
   // const [receiptOrder, setReceiptOrder] = useState<SavedOrder | null>(null);
+  const refreshStaff = useCallback(async () => {
+    try {
+      const res = await fetch("/api/staff", { cache: "no-store" });
+      const data = (await res.json()) as { staff?: StaffStatus[] };
+      if (!res.ok || !data.staff) return;
+      setStaff(data.staff);
+    } catch {
+      /* keep the last board */
+    }
+  }, []);
+
   const today = bangkokDayKey();
   const isToday = viewDay === today;
 
@@ -117,8 +138,17 @@ export default function PosApp() {
   }, [voidConfirmId]);
 
   useEffect(() => {
+    if (role === "cashier") {
+      setStaffName("");
+      return;
+    }
+    if (me) setStaffName((current) => current || me);
+  }, [me, role]);
+
+  useEffect(() => {
     void refreshDays();
-  }, [refreshDays]);
+    void refreshStaff();
+  }, [refreshDays, refreshStaff]);
 
   useEffect(() => {
     void refreshOrders();
@@ -127,6 +157,7 @@ export default function PosApp() {
       if (document.visibilityState === "visible") {
         void refreshOrders();
         void refreshDays();
+        void refreshStaff();
       }
     };
     window.addEventListener("focus", onFocus);
@@ -136,6 +167,7 @@ export default function PosApp() {
       if (document.visibilityState === "visible") {
         void refreshOrders();
         void refreshDays();
+        void refreshStaff();
       }
     }, 30000);
 
@@ -144,7 +176,7 @@ export default function PosApp() {
       document.removeEventListener("visibilitychange", onFocus);
       clearInterval(timer);
     };
-  }, [refreshOrders, refreshDays]);
+  }, [refreshOrders, refreshDays, refreshStaff]);
 
   const discount: Discount = {
     type: discountType,
@@ -250,7 +282,7 @@ export default function PosApp() {
           lines: cart.map((l) => ({ id: l.id, qty: l.qty })),
           discount,
           customerName: customerName.trim() || undefined,
-          staffName: staffName.trim() || undefined,
+          staffName: billedName || undefined,
           tableNo: tableNo.trim() || undefined,
         }),
       });
@@ -263,7 +295,7 @@ export default function PosApp() {
         billText({
           tableNo: tableNo.trim() || undefined,
           customerName: customerName.trim() || undefined,
-          staffName: staffName.trim() || undefined,
+          staffName: billedName || undefined,
           lines: cart,
         }),
       );
@@ -347,11 +379,54 @@ export default function PosApp() {
   }
 
   const itemCount = cart.reduce((sum, line) => sum + line.qty, 0);
+  const billedName = staffName.trim();
+  const freeCount = staff.filter((row) => row.free).length;
 
   return (
     <>
     <div className="pos-shell">
       <div className="pos-grid">
+        <aside className="staff-rail" aria-label="ใครว่างอยู่">
+          <div className="staff-board-head">
+            <h2 className="staff-board-title">ใครว่างอยู่</h2>
+            <span className="staff-board-count">{freeCount} ว่าง</span>
+          </div>
+          <div className="staff-groups staff-rail-body">
+            {(["f", "m"] as Gender[]).map((gender) => {
+              const rows = [...byGender(staff, gender)].sort(
+                (a, b) => Number(b.free) - Number(a.free),
+              );
+              return (
+                <div key={gender} className="staff-group">
+                  <p className="staff-group-title">
+                    {GENDER_LABEL[gender]}
+                    <span className="staff-group-count">
+                      {rows.filter((row) => row.free).length}
+                    </span>
+                  </p>
+                  <ul className="staff-board-list">
+                    {rows.map((row) => (
+                      <li key={row.name}>
+                        <span
+                          className={
+                            row.free ? "staff-chip is-free" : "staff-chip"
+                          }
+                          title={row.name}
+                        >
+                          <span className="staff-dot" aria-hidden="true" />
+                          <span className="staff-name">{row.name}</span>
+                          <span className="sr-only">
+                            {row.free ? " ว่าง" : " ไม่ว่าง"}
+                          </span>
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            })}
+          </div>
+        </aside>
         <div className="pos-main">
       <header className="pos-header">
         <img
@@ -364,6 +439,9 @@ export default function PosApp() {
         <div className="pos-header-bar">
           <h1 className="pos-title">Point of Sale</h1>
           <div className="header-actions">
+            <a className="btn btn-secondary" href="/orders">
+              ออเดอร์
+            </a>
             <a className="btn btn-secondary" href="/summary">
               สรุปสินค้า
             </a>
@@ -691,9 +769,7 @@ export default function PosApp() {
           <div className="cart-head">
             <h2 className="cart-title">ออเดอร์</h2>
             <div className="cart-head-actions">
-              <span className="cart-count">
-                {itemCount > 0 ? `${itemCount} รายการ` : "ว่าง"}
-              </span>
+              <span className="cart-count">{itemCount} รายการ</span>
               <button
                 type="button"
                 className="btn btn-secondary btn-sm"
@@ -726,9 +802,15 @@ export default function PosApp() {
             </label>
             <label className="name-field">
               <span>
-                ชื่อตัวเอง <em>(ไม่บังคับ)</em>
+                ชื่อพนักงาน <em>(ไม่บังคับ)</em>
               </span>
-              <RecipientSelect value={staffName} onChange={setStaffName} />
+              <RecipientSelect
+                value={staffName}
+                onChange={setStaffName}
+                freeNames={
+                  new Set(staff.filter((row) => row.free).map((row) => row.name))
+                }
+              />
             </label>
             <label className="name-field">
               <span>

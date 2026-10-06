@@ -81,6 +81,12 @@ export function formatDayShort(day: string): string {
   });
 }
 
+export function ordersForStaff(orders: SavedOrder[], staffName: string): SavedOrder[] {
+  const name = staffName.trim();
+  if (!name) return [];
+  return orders.filter((order) => order.staffName === name);
+}
+
 export function summarizeOrders(orders: SavedOrder[]) {
   const active = orders.filter((o) => !o.voided);
   return {

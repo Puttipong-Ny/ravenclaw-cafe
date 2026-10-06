@@ -1,36 +1,15 @@
 "use client";
 
 import { useMemo, useState } from "react";
-
-export const RECIPIENTS = [
-  "Adelriana Fe Ferbulma",
-  "Amin Ramirez",
-  "Arloid Deeney",
-  "Celine Cayla",
-  "Dagnis De Valence",
-  "Deimos Lolivan",
-  "Eric Alaric Moonnox",
-  "Gazelle Tataros Wayne",
-  "Gemma Velestra Winterheart",
-  "Jaymie Maccoille",
-  "Kazuha Bloomfield",
-  "Lim Shinyu",
-  "LiYin Nina Rosendahl",
-  "Mojiko Yellowtime",
-  "Peach Grimoire",
-  "Rachel Kaze",
-  "Robert Raymond",
-  "Seralynn Musetia",
-  "Thames Aphroditemes",
-  "Way Whal Wayne",
-] as const;
+import { STAFF } from "@/lib/staff";
 
 type Props = {
   value: string;
   onChange: (name: string) => void;
+  freeNames?: ReadonlySet<string>;
 };
 
-export default function RecipientSelect({ value, onChange }: Props) {
+export default function RecipientSelect({ value, onChange, freeNames }: Props) {
   const [query, setQuery] = useState(value);
   const [open, setOpen] = useState(false);
   const [prev, setPrev] = useState(value);
@@ -41,9 +20,12 @@ export default function RecipientSelect({ value, onChange }: Props) {
 
   const matches = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return [...RECIPIENTS];
-    return RECIPIENTS.filter((name) => name.toLowerCase().includes(q));
-  }, [query]);
+    const list = q
+      ? STAFF.filter((name) => name.toLowerCase().includes(q))
+      : [...STAFF];
+    if (!freeNames) return list;
+    return list.sort((a, b) => Number(freeNames.has(b)) - Number(freeNames.has(a)));
+  }, [query, freeNames]);
 
   function pick(name: string) {
     onChange(name);
@@ -75,7 +57,7 @@ export default function RecipientSelect({ value, onChange }: Props) {
             setQuery("");
             return;
           }
-          const exact = RECIPIENTS.find(
+          const exact = STAFF.find(
             (name) => name.toLowerCase() === trimmed.toLowerCase(),
           );
           if (exact) {
@@ -90,7 +72,7 @@ export default function RecipientSelect({ value, onChange }: Props) {
         <button
           type="button"
           className="recipient-clear"
-          aria-label="ลบชื่อตัวเอง"
+          aria-label="ลบชื่อพนักงาน"
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => {
             onChange("");
@@ -120,7 +102,24 @@ export default function RecipientSelect({ value, onChange }: Props) {
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => pick(name)}
                 >
-                  {name}
+                  <span
+                    className={
+                      freeNames?.has(name)
+                        ? "recipient-dot is-free"
+                        : "recipient-dot"
+                    }
+                    aria-hidden="true"
+                  />
+                  <span className="recipient-name">{name}</span>
+                  {freeNames ? (
+                    <span
+                      className={
+                        freeNames.has(name) ? "recipient-free" : "recipient-busy"
+                      }
+                    >
+                      {freeNames.has(name) ? "ว่าง" : "ไม่ว่าง"}
+                    </span>
+                  ) : null}
                 </button>
               </li>
             ))

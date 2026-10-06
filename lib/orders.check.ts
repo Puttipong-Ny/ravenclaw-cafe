@@ -6,6 +6,7 @@ import {
   formatDayShort,
   isDayKey,
   shiftBangkokDay,
+  ordersForStaff,
   summarizeOrders,
 } from "./orders";
 
@@ -35,5 +36,16 @@ const summary = summarizeOrders([
 ]);
 assert.equal(summary.count, 1);
 assert.equal(summary.total, 75);
+
+const mine = ordersForStaff(
+  [
+    { ...summary.orders[0], id: "a", staffName: "Deimos Lolivan" },
+    { ...summary.orders[0], id: "b", staffName: "Rachel Kaze" },
+    { ...summary.orders[0], id: "c" },
+  ],
+  "Deimos Lolivan",
+);
+assert.deepEqual(mine.map((order) => order.id), ["a"]);
+assert.equal(ordersForStaff(mine, "  ").length, 0);
 
 console.log("orders helper ok");
