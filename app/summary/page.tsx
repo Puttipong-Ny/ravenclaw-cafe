@@ -63,9 +63,14 @@ export default function SummaryPage() {
         />
         <div className="pos-header-bar">
           <h1 className="pos-title">สรุปสินค้า</h1>
-          <a className="btn btn-secondary" href="/">
-            กลับหน้าขาย
-          </a>
+          <div className="header-actions">
+            <a className="btn btn-secondary" href="/api/orders/summary/export">
+              ส่งออก Excel
+            </a>
+            <a className="btn btn-secondary" href="/">
+              กลับหน้าขาย
+            </a>
+          </div>
         </div>
       </header>
 
