@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { formatSickles, lineDetail } from "@/lib/menu";
+import { useEffect, useMemo, useState } from "react";
+import { formatSickles, lineContents, lineDetail, lineMatchesQuery } from "@/lib/menu";
 
 type Row = { name: string; qty: number };
 
@@ -29,6 +29,7 @@ type Summary = {
 export default function SummaryPage() {
   const [data, setData] = useState<Summary | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
 
   useEffect(() => {
     let cancel = false;
@@ -50,6 +51,41 @@ export default function SummaryPage() {
       cancel = true;
     };
   }, []);
+
+  const q = query.trim().toLowerCase();
+  const view = useMemo(() => {
+    if (!data) return null;
+    if (!q) return data;
+    const orders = data.orders.filter((order) =>
+      order.lines.some((line) => lineMatchesQuery(line, q)),
+    );
+    return {
+      ...data,
+      bills: orders.length,
+      total: orders.reduce((sum, order) => sum + order.total, 0),
+      sets: data.sets.filter(
+        (row) =>
+          row.name.toLowerCase().includes(q) ||
+          orders.some((order) =>
+            order.lines.some(
+              (line) => line.name === row.name && lineMatchesQuery(line, q),
+            ),
+          ),
+      ),
+      products: data.products.filter(
+        (row) =>
+          row.name.toLowerCase().includes(q) ||
+          orders.some((order) =>
+            order.lines.some(
+              (line) =>
+                lineMatchesQuery(line, q) &&
+                lineContents(line.id, line.name).includes(row.name),
+            ),
+          ),
+      ),
+      orders,
+    };
+  }, [data, q]);
 
   return (
     <div className="pos-shell summary-shell">
@@ -83,17 +119,19 @@ export default function SummaryPage() {
       <div className="summary-layout">
         <section className="sales-log summary-page">
           <div className="sales-log-head">
-            <h2 className="menu-set-title">รวมทุกบิลที่ยังไม่ยกเลิก</h2>
-            {data ? (
+            <h2 className="menu-set-title">
+              {q ? "รายการที่ตรงกับคำค้น" : "รวมทุกบิลที่ยังไม่ยกเลิก"}
+            </h2>
+            {view ? (
               <div className="stat-pair">
                 <div className="stat-chip">
                   <span className="stat-chip-label">บิล</span>
-                  <strong className="stat-chip-value">{data.bills}</strong>
+                  <strong className="stat-chip-value">{view.bills}</strong>
                 </div>
                 <div className="stat-chip stat-chip--accent">
                   <span className="stat-chip-label">ยอด</span>
                   <strong className="stat-chip-value">
-                    {formatSickles(data.total)}
+                    {formatSickles(view.total)}
                   </strong>
                 </div>
               </div>
@@ -102,23 +140,56 @@ export default function SummaryPage() {
             )}
           </div>
 
-          {data && (
-            <div className="summary-grid">
-              <CountTable title="สินค้าในเซ็ต" rows={data.products} empty="ยังไม่มียอด" />
-              <CountTable title="เซ็ตที่ขาย" rows={data.sets} empty="ยังไม่มียอด" />
-            </div>
+          {view && (
+            <>
+              <div className="summary-filter">
+                <input
+                  className="orders-day-input summary-filter-input"
+                  type="search"
+                  placeholder="ค้นหาเซ็ตหรือสินค้า เช่น Set A, Cupcake"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  aria-label="ค้นหาเซ็ตหรือสินค้า"
+                />
+                {q ? (
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => setQuery("")}
+                  >
+                    ล้าง
+                  </button>
+                ) : null}
+              </div>
+              <div className="summary-grid">
+                <CountTable
+                  title="สินค้าในเซ็ต"
+                  rows={view.products}
+                  empty={q ? "ไม่พบสินค้า" : "ยังไม่มียอด"}
+                  query={query}
+                  onPick={setQuery}
+                />
+                <CountTable
+                  title="เซ็ตที่ขาย"
+                  rows={view.sets}
+                  empty={q ? "ไม่พบเซ็ต" : "ยังไม่มียอด"}
+                  query={query}
+                  onPick={setQuery}
+                />
+              </div>
+            </>
           )}
         </section>
 
         <section className="sales-log">
           <div className="sales-log-head">
-            <h2 className="menu-set-title">บิลทั้งหมด</h2>
+            <h2 className="menu-set-title">{q ? "บิลที่ตรงกัน" : "บิลทั้งหมด"}</h2>
           </div>
-          {!data ? null : data.orders.length === 0 ? (
-            <p className="sales-empty">ยังไม่มีบิล</p>
+          {!view ? null : view.orders.length === 0 ? (
+            <p className="sales-empty">{q ? "ไม่พบบิลที่ตรงกัน" : "ยังไม่มีบิล"}</p>
           ) : (
             <ul className="sales-list summary-bills">
-              {data.orders.map((o) => (
+              {view.orders.map((o) => (
                 <li key={o.id} className="sales-card">
                   <div className="sales-card-top">
                     <time className="sales-time" dateTime={o.at}>
@@ -192,11 +263,16 @@ function CountTable({
   title,
   rows,
   empty,
+  query,
+  onPick,
 }: {
   title: string;
   rows: Row[];
   empty: string;
+  query: string;
+  onPick: (name: string) => void;
 }) {
+  const picked = query.trim().toLowerCase();
   return (
     <div className="summary-block">
       <h3 className="summary-block-title">{title}</h3>
@@ -204,12 +280,22 @@ function CountTable({
         <p className="sales-empty">{empty}</p>
       ) : (
         <ul className="summary-rows">
-          {rows.map((row) => (
-            <li key={row.name}>
-              <span>{row.name}</span>
-              <strong>{row.qty.toLocaleString("en-US")}</strong>
-            </li>
-          ))}
+          {rows.map((row) => {
+            const on = picked === row.name.toLowerCase();
+            return (
+              <li key={row.name}>
+                <button
+                  type="button"
+                  className={on ? "is-on" : undefined}
+                  aria-pressed={on}
+                  onClick={() => onPick(on ? "" : row.name)}
+                >
+                  <span>{row.name}</span>
+                  <strong>{row.qty.toLocaleString("en-US")}</strong>
+                </button>
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>

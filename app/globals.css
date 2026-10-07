@@ -2121,15 +2121,43 @@ button:disabled {
   gap: 0.35rem;
 }
 
+.summary-filter {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.85rem 1.15rem 0;
+}
+
+.summary-filter-input {
+  flex: 1;
+  width: auto;
+  min-width: 0;
+}
+
 .summary-rows li {
+  margin: 0;
+}
+
+.summary-rows button {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   gap: 1rem;
+  width: 100%;
   padding: 0.7rem 0.8rem;
   border-radius: 0.7rem;
   background: var(--snow);
   border: 1px solid var(--line-soft);
+  font: inherit;
   font-weight: 650;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.summary-rows button.is-on {
+  border-color: var(--bronze);
+  background: color-mix(in srgb, var(--bronze) 16%, white);
 }
 
 .summary-rows strong {

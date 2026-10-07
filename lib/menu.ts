@@ -64,6 +64,19 @@ export function lineContents(id: string, name: string): string[] {
   return parts?.length ? parts : [name];
 }
 
+/** Match a sold line by its name or by anything inside the set. */
+export function lineMatchesQuery(
+  line: { id: string; name: string },
+  query: string,
+): boolean {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+  if (line.name.toLowerCase().includes(q)) return true;
+  return lineContents(line.id, line.name).some((part) =>
+    part.toLowerCase().includes(q),
+  );
+}
+
 export type DiscountType = "none" | "percent" | "amount";
 
 export type Discount = {

@@ -6,6 +6,7 @@ import {
   calcSubtotal,
   calcTotal,
   lineContents,
+  lineMatchesQuery,
   parseDiscount,
   tallyOrder,
 } from "./menu";
@@ -57,5 +58,9 @@ const mixed = tallyOrder(
 assert.equal(mixed.total, 10300);
 assert.deepEqual(lineContents("set-a", "Set A"), ["Cupcake", "Charm Tea"]);
 assert.deepEqual(lineContents("gone", "Fairy Tale"), ["Fairy Tale"]);
+assert.equal(lineMatchesQuery({ id: "set-a", name: "Set A" }, "cup"), true);
+assert.equal(lineMatchesQuery({ id: "set-a", name: "Set A" }, "set b"), false);
+assert.equal(lineMatchesQuery({ id: "gone", name: "Fairy Tale" }, "tale"), true);
+assert.equal(lineMatchesQuery({ id: "set-a", name: "Set A" }, "  "), true);
 
 console.log("menu calc ok");
