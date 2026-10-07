@@ -13,6 +13,8 @@ import {
   tallyOrder,
   type Discount,
 } from "@/lib/menu";
+import { listDirectory } from "@/lib/peopleDirectory";
+
 
 type OrderDoc = {
   id: string;
@@ -21,9 +23,12 @@ type OrderDoc = {
   subtotal: number;
   discount: Discount;
   discountAmt: number;
+  tip?: Discount;
+  tipAmt?: number;
   total: number;
   customerName?: string;
   staffName?: string;
+  cashierName?: string;
   tableNo?: string;
   voided?: boolean;
 };
@@ -34,6 +39,14 @@ function cleanName(value: unknown): string | undefined {
   return trimmed ? trimmed.slice(0, 80) : undefined;
 }
 
+function cleanCashier(
+  value: unknown,
+  cashiers: readonly string[],
+): string | undefined {
+  const name = cleanName(value);
+  return name && cashiers.includes(name) ? name : undefined;
+}
+
 function toSaved(doc: OrderDoc): SavedOrder {
   return {
     id: doc.id,
@@ -42,9 +55,12 @@ function toSaved(doc: OrderDoc): SavedOrder {
     subtotal: doc.subtotal,
     discount: doc.discount,
     discountAmt: doc.discountAmt,
+    tip: doc.tip,
+    tipAmt: doc.tipAmt || 0,
     total: doc.total,
     customerName: doc.customerName,
     staffName: doc.staffName,
+    cashierName: doc.cashierName,
     tableNo: doc.tableNo,
     voided: doc.voided || undefined,
   };
@@ -80,9 +96,12 @@ export async function GET(request: Request) {
             subtotal: 1,
             discount: 1,
             discountAmt: 1,
+            tip: 1,
+            tipAmt: 1,
             total: 1,
             customerName: 1,
             staffName: 1,
+            cashierName: 1,
             tableNo: 1,
             voided: 1,
           },
@@ -111,8 +130,10 @@ export async function POST(request: Request) {
     const body = (await request.json()) as {
       lines?: unknown;
       discount?: unknown;
+      tip?: unknown;
       customerName?: unknown;
       staffName?: unknown;
+      cashierName?: unknown;
       tableNo?: unknown;
     };
 
@@ -122,7 +143,14 @@ export async function POST(request: Request) {
     }
 
     const discount = parseDiscount(body.discount);
-    const tally = tallyOrder(built.lines, discount);
+    const tip = parseDiscount(body.tip);
+    const tally = tallyOrder(built.lines, discount, tip);
+
+    const db = await getDb();
+    const { people } = await listDirectory(db);
+    const cashiers = people
+      .filter((person) => person.role === "cashier")
+      .map((person) => person.name);
 
     const order: OrderDoc = {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -131,13 +159,15 @@ export async function POST(request: Request) {
       subtotal: tally.subtotal,
       discount,
       discountAmt: tally.discountAmt,
+      tip,
+      tipAmt: tally.tipAmt,
       total: tally.total,
       customerName: cleanName(body.customerName),
       staffName: cleanName(body.staffName),
+      cashierName: cleanCashier(body.cashierName, cashiers),
       tableNo: cleanName(body.tableNo)?.slice(0, 12),
     };
 
-    const db = await getDb();
     await db.collection<OrderDoc>("orders").insertOne(order);
     return NextResponse.json({ order: toSaved(order) }, { status: 201 });
   } catch (err) {

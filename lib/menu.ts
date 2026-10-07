@@ -116,6 +116,16 @@ export function calcTotal(subtotal: number, discount: Discount): number {
   return Math.max(0, subtotal - calcDiscount(subtotal, discount));
 }
 
+/** Percent tip is of the amount after discount. A Sickles tip is not capped. */
+export function calcTip(base: number, tip: Discount): number {
+  if (base < 0 || tip.type === "none" || tip.value <= 0) return 0;
+  if (tip.type === "percent") {
+    const pct = Math.min(100, tip.value);
+    return Math.round((base * pct) / 100);
+  }
+  return Math.round(tip.value);
+}
+
 export const SPECIAL_SET_ID = "set-special";
 const SPECIAL_BUNDLE_QTY = 3;
 const SPECIAL_BUNDLE_PRICE = 10000;
@@ -135,12 +145,21 @@ export function calcSetPromo(lines: { id: string; qty: number }[]): number {
 export function tallyOrder(
   lines: { id: string; price: number; qty: number }[],
   discount: Discount,
+  tip: Discount = { type: "none", value: 0 },
 ) {
   const subtotal = calcSubtotal(lines);
   const promo = calcSetPromo(lines);
   const extra = calcDiscount(subtotal - promo, discount);
   const discountAmt = promo + extra;
-  return { subtotal, promo, extra, discountAmt, total: subtotal - discountAmt };
+  const tipAmt = calcTip(subtotal - discountAmt, tip);
+  return {
+    subtotal,
+    promo,
+    extra,
+    discountAmt,
+    tipAmt,
+    total: subtotal - discountAmt + tipAmt,
+  };
 }
 
 /** Build order lines + totals from menu catalog (server-trusted). */

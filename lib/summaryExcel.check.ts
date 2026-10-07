@@ -12,6 +12,7 @@ const xml = summaryWorkbook({
       tableNo: "1",
       customerName: "Pil",
       staffName: "Deimos Lolivan",
+      cashierName: "Arias Alphebias",
       discountAmt: 0,
       total: 300,
       lines: [{ id: "set-a", name: "Set A", price: 300, qty: 1 }],
@@ -26,6 +27,11 @@ assert.match(xml, /Cupcake &amp; Tea/);
 assert.match(xml, /ss:Type="Number">300</);
 assert.match(xml, /Cupcake \+ Charm Tea/);
 assert.match(xml, /Deimos Lolivan/);
+assert.match(xml, /ผู้เสิร์ฟ/);
+assert.match(xml, /ผู้คิดเงิน/);
+assert.match(xml, /แขก/);
+assert.match(xml, /ทิป/);
+assert.match(xml, /Arias Alphebias/);
 assert.equal(xml.includes("<script"), false);
 
 console.log("summary excel ok");

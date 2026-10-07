@@ -6,10 +6,25 @@ import { STAFF } from "@/lib/staff";
 type Props = {
   value: string;
   onChange: (name: string) => void;
+  names?: readonly string[];
   freeNames?: ReadonlySet<string>;
+  clearLabel?: string;
+  placeholder?: string;
+  /** Keep text that is not already in the list, so a new role can be typed. */
+  allowCustom?: boolean;
+  dropUp?: boolean;
 };
 
-export default function RecipientSelect({ value, onChange, freeNames }: Props) {
+export default function RecipientSelect({
+  value,
+  onChange,
+  names = STAFF,
+  freeNames,
+  clearLabel = "ลบชื่อ",
+  placeholder = "ค้นหาชื่อ",
+  allowCustom = false,
+  dropUp = false,
+}: Props) {
   const [query, setQuery] = useState(value);
   const [open, setOpen] = useState(false);
   const [prev, setPrev] = useState(value);
@@ -21,11 +36,16 @@ export default function RecipientSelect({ value, onChange, freeNames }: Props) {
   const matches = useMemo(() => {
     const q = query.trim().toLowerCase();
     const list = q
-      ? STAFF.filter((name) => name.toLowerCase().includes(q))
-      : [...STAFF];
+      ? names.filter((name) => name.toLowerCase().includes(q))
+      : [...names];
     if (!freeNames) return list;
     return list.sort((a, b) => Number(freeNames.has(b)) - Number(freeNames.has(a)));
-  }, [query, freeNames]);
+  }, [query, names, freeNames]);
+
+  const trimmed = query.trim();
+  const exact = names.find((name) => name.toLowerCase() === trimmed.toLowerCase());
+  const showCreate =
+    allowCustom && trimmed.length > 0 && !exact && matches.length === 0;
 
   function pick(name: string) {
     onChange(name);
@@ -42,27 +62,29 @@ export default function RecipientSelect({ value, onChange, freeNames }: Props) {
         aria-expanded={open}
         aria-autocomplete="list"
         autoComplete="off"
-        placeholder="ค้นหาชื่อ"
+        placeholder={placeholder}
         value={query}
         onChange={(e) => {
           setQuery(e.target.value);
           setOpen(true);
         }}
         onFocus={() => setOpen(true)}
+        onClick={() => setOpen(true)}
         onBlur={() => {
           setOpen(false);
-          const trimmed = query.trim();
           if (!trimmed) {
             onChange("");
             setQuery("");
             return;
           }
-          const exact = STAFF.find(
-            (name) => name.toLowerCase() === trimmed.toLowerCase(),
-          );
           if (exact) {
             onChange(exact);
             setQuery(exact);
+            return;
+          }
+          if (allowCustom) {
+            onChange(trimmed);
+            setQuery(trimmed);
             return;
           }
           setQuery(value);
@@ -72,7 +94,7 @@ export default function RecipientSelect({ value, onChange, freeNames }: Props) {
         <button
           type="button"
           className="recipient-clear"
-          aria-label="ลบชื่อพนักงาน"
+          aria-label={clearLabel}
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => {
             onChange("");
@@ -84,8 +106,11 @@ export default function RecipientSelect({ value, onChange, freeNames }: Props) {
         </button>
       )}
       {open && (
-        <ul className="recipient-list" role="listbox">
-          {matches.length === 0 ? (
+        <ul
+          className={dropUp ? "recipient-list recipient-list--up" : "recipient-list"}
+          role="listbox"
+        >
+          {matches.length === 0 && !showCreate ? (
             <li className="recipient-empty">ไม่พบชื่อ</li>
           ) : (
             matches.map((name) => (
@@ -102,14 +127,16 @@ export default function RecipientSelect({ value, onChange, freeNames }: Props) {
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => pick(name)}
                 >
-                  <span
-                    className={
-                      freeNames?.has(name)
-                        ? "recipient-dot is-free"
-                        : "recipient-dot"
-                    }
-                    aria-hidden="true"
-                  />
+                  {freeNames ? (
+                    <span
+                      className={
+                        freeNames.has(name)
+                          ? "recipient-dot is-free"
+                          : "recipient-dot"
+                      }
+                      aria-hidden="true"
+                    />
+                  ) : null}
                   <span className="recipient-name">{name}</span>
                   {freeNames ? (
                     <span
@@ -124,6 +151,19 @@ export default function RecipientSelect({ value, onChange, freeNames }: Props) {
               </li>
             ))
           )}
+          {showCreate ? (
+            <li>
+              <button
+                type="button"
+                role="option"
+                className="recipient-option"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => pick(trimmed)}
+              >
+                <span className="recipient-name">เพิ่ม “{trimmed}”</span>
+              </button>
+            </li>
+          ) : null}
         </ul>
       )}
     </div>

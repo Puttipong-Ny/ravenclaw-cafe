@@ -16,8 +16,10 @@ export async function GET() {
         lines: { id: string; name: string; price: number; qty: number }[];
         total: number;
         discountAmt?: number;
+        tipAmt?: number;
         customerName?: string;
         staffName?: string;
+        cashierName?: string;
         tableNo?: string;
       }>("orders")
       .find(
@@ -29,8 +31,10 @@ export async function GET() {
             lines: 1,
             total: 1,
             discountAmt: 1,
+            tipAmt: 1,
             customerName: 1,
             staffName: 1,
+            cashierName: 1,
             tableNo: 1,
           },
         },
@@ -71,8 +75,10 @@ export async function GET() {
         lines: doc.lines ?? [],
         total: doc.total || 0,
         discountAmt: doc.discountAmt || 0,
+        tipAmt: doc.tipAmt || 0,
         customerName: doc.customerName,
         staffName: doc.staffName,
+        cashierName: doc.cashierName,
         tableNo: doc.tableNo,
       })),
     });

@@ -23,6 +23,7 @@ import { useMyStaff } from "@/components/useMyStaff";
 import {
   byGender,
   GENDER_LABEL,
+  STAFF_ROSTER,
   staffBoard,
   type Gender,
   type StaffStatus,
@@ -45,6 +46,8 @@ export default function PosApp() {
   const [cart, setCart] = useState<CartLine[]>([]);
   const [discountType, setDiscountType] = useState<DiscountType>("none");
   const [discountValue, setDiscountValue] = useState("");
+  const [tipType, setTipType] = useState<DiscountType>("none");
+  const [tipValue, setTipValue] = useState("");
   const [paidFlash, setPaidFlash] = useState(false);
   const [orders, setOrders] = useState<SavedOrder[]>([]);
   const [ready, setReady] = useState(false);
@@ -52,8 +55,10 @@ export default function PosApp() {
   const [busy, setBusy] = useState(false);
   const [customerName, setCustomerName] = useState("");
   const [staffName, setStaffName] = useState("");
-  const { name: me, role } = useMyStaff();
-  const [staff, setStaff] = useState<StaffStatus[]>(() => staffBoard([]));
+  const { name: me, role, cashier: cashierName } = useMyStaff();
+  const [staff, setStaff] = useState<StaffStatus[]>(() =>
+    staffBoard(STAFF_ROSTER, []),
+  );
   const [tableNo, setTableNo] = useState("");
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [billPopup, setBillPopup] = useState<string | null>(null);
@@ -182,7 +187,11 @@ export default function PosApp() {
     type: discountType,
     value: Number(discountValue) || 0,
   };
-  const { subtotal, promo, extra, total } = tallyOrder(cart, discount);
+  const tip: Discount = {
+    type: tipType,
+    value: Number(tipValue) || 0,
+  };
+  const { subtotal, promo, extra, tipAmt, total } = tallyOrder(cart, discount, tip);
   const day = summarizeOrders(orders);
   const allDaysTotal = daySummaries.reduce((sum, s) => sum + s.total, 0);
   const allDaysCount = daySummaries.reduce((sum, s) => sum + s.count, 0);
@@ -213,14 +222,16 @@ export default function PosApp() {
     tableNo?: string;
     customerName?: string;
     staffName?: string;
+    cashierName?: string;
     lines: { id: string; name: string; qty: number }[];
   }): string {
     const tick = (value: string) => value.replaceAll("`", "'");
     const who = [
       o.voided ? "**ยกเลิกแล้ว**" : null,
       o.tableNo ? `**โต๊ะ** \`${tick(o.tableNo)}\`` : null,
-      o.customerName ? `**ลูกค้า** \`${tick(o.customerName)}\`` : null,
-      o.staffName ? `**โดย** \`${tick(o.staffName)}\`` : null,
+      o.customerName ? `**แขก** \`${tick(o.customerName)}\`` : null,
+      o.staffName ? `**ผู้เสิร์ฟ** \`${tick(o.staffName)}\`` : null,
+      o.cashierName ? `**ผู้คิดเงิน** \`${tick(o.cashierName)}\`` : null,
     ].filter((line) => line !== null);
     const items = o.lines.map((l) => {
       const detail = lineDetail(l.id);
@@ -266,6 +277,8 @@ export default function PosApp() {
     setCart([]);
     setDiscountType("none");
     setDiscountValue("");
+    setTipType("none");
+    setTipValue("");
     setCustomerName("");
     setTableNo("");
     setPaidFlash(false);
@@ -281,8 +294,10 @@ export default function PosApp() {
         body: JSON.stringify({
           lines: cart.map((l) => ({ id: l.id, qty: l.qty })),
           discount,
+          tip,
           customerName: customerName.trim() || undefined,
           staffName: billedName || undefined,
+          cashierName: cashierName.trim() || undefined,
           tableNo: tableNo.trim() || undefined,
         }),
       });
@@ -296,6 +311,7 @@ export default function PosApp() {
           tableNo: tableNo.trim() || undefined,
           customerName: customerName.trim() || undefined,
           staffName: billedName || undefined,
+          cashierName: cashierName.trim() || undefined,
           lines: cart,
         }),
       );
@@ -304,6 +320,8 @@ export default function PosApp() {
       setCart([]);
       setDiscountType("none");
       setDiscountValue("");
+      setTipType("none");
+      setTipValue("");
       setCustomerName("");
       setTableNo("");
       if (!isToday) setViewDay(bangkokDayKey());
@@ -585,17 +603,6 @@ export default function PosApp() {
                     <p className="sum-card-sub">{allDaysCount} บิล</p>
                   </div>
                 )}
-                <label className="sales-day-other">
-                  <span className="sales-day-other-text">เลือกวันอื่น</span>
-                  <input
-                    type="date"
-                    value={viewDay}
-                    max={today}
-                    onChange={(e) => {
-                      if (e.target.value) setViewDay(e.target.value);
-                    }}
-                  />
-                </label>
               </nav>
 
               <div className="sales-day-panel">
@@ -625,15 +632,6 @@ export default function PosApp() {
                     ) : (
                       <span className="sales-day-panel-sum">…</span>
                     )}
-                    {!isToday && (
-                      <button
-                        type="button"
-                        className="btn btn-secondary btn-sm"
-                        onClick={() => setViewDay(today)}
-                      >
-                        กลับวันนี้
-                      </button>
-                    )}
                   </div>
                 </div>
 
@@ -660,7 +658,7 @@ export default function PosApp() {
                           </strong>
                         </div>
 
-                        {(o.customerName || o.staffName || o.tableNo) && (
+                        {(o.customerName || o.staffName || o.cashierName || o.tableNo) && (
                           <div className="sales-people">
                             {o.tableNo ? (
                               <span className="sales-chip sales-chip--table">
@@ -670,14 +668,20 @@ export default function PosApp() {
                             ) : null}
                             {o.customerName ? (
                               <span className="sales-chip sales-chip--customer">
-                                <span className="sales-chip-label">ลูกค้า</span>
+                                <span className="sales-chip-label">แขก</span>
                                 {o.customerName}
                               </span>
                             ) : null}
                             {o.staffName ? (
                               <span className="sales-chip sales-chip--staff">
-                                <span className="sales-chip-label">โดย</span>
+                                <span className="sales-chip-label">ผู้เสิร์ฟ</span>
                                 {o.staffName}
+                              </span>
+                            ) : null}
+                            {o.cashierName ? (
+                              <span className="sales-chip sales-chip--pay">
+                                <span className="sales-chip-label">ผู้คิดเงิน</span>
+                                {o.cashierName}
                               </span>
                             ) : null}
                           </div>
@@ -707,6 +711,9 @@ export default function PosApp() {
                           <p className="sales-discount">
                             ส่วนลด −{formatSickles(o.discountAmt)}
                           </p>
+                        )}
+                        {(o.tipAmt ?? 0) > 0 && !o.voided && (
+                          <p className="sales-tip">ทิป +{formatSickles(o.tipAmt ?? 0)}</p>
                         )}
 
                         <div className="sales-card-actions">
@@ -778,7 +785,8 @@ export default function PosApp() {
                   cart.length === 0 &&
                   !customerName &&
                   !tableNo &&
-                  discountType === "none"
+                  discountType === "none" &&
+                  tipType === "none"
                 }
               >
                 ล้างออเดอร์
@@ -789,7 +797,7 @@ export default function PosApp() {
           <div className="name-fields">
             <label className="name-field">
               <span>
-                ชื่อลูกค้า <em>(ไม่บังคับ)</em>
+                แขก <em>(ไม่บังคับ)</em>
               </span>
               <input
                 className="discount-input"
@@ -802,17 +810,19 @@ export default function PosApp() {
             </label>
             <label className="name-field">
               <span>
-                ชื่อพนักงาน <em>(ไม่บังคับ)</em>
+                ผู้เสิร์ฟ <em>(ไม่บังคับ)</em>
               </span>
               <RecipientSelect
                 value={staffName}
                 onChange={setStaffName}
+                names={staff.map((row) => row.name)}
                 freeNames={
                   new Set(staff.filter((row) => row.free).map((row) => row.name))
                 }
+                clearLabel="ลบชื่อผู้เสิร์ฟ"
               />
             </label>
-            <label className="name-field">
+            <label className="name-field name-field--wide">
               <span>
                 เลขโต๊ะ <em>(ไม่บังคับ)</em>
               </span>
@@ -827,6 +837,10 @@ export default function PosApp() {
                 onChange={(e) => setTableNo(e.target.value)}
               />
             </label>
+            <p className="cashier-line">
+              <span>ผู้คิดเงิน</span>
+              <strong>{cashierName || "ยังไม่ได้เลือก"}</strong>
+            </p>
           </div>
 
           {paidFlash && (
@@ -873,6 +887,45 @@ export default function PosApp() {
               ))}
             </ul>
           )}
+
+          <div className="discount-box cart-dock">
+            <p className="discount-label">ทิป</p>
+            <div className="discount-types">
+              {(
+                [
+                  ["none", "ไม่มี"],
+                  ["percent", "%"],
+                  ["amount", "Sickles"],
+                ] as const
+              ).map(([type, label]) => (
+                <button
+                  key={type}
+                  type="button"
+                  className={
+                    tipType === type ? "discount-type is-active" : "discount-type"
+                  }
+                  onClick={() => {
+                    setTipType(type);
+                    if (type === "none") setTipValue("");
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            {tipType !== "none" && (
+              <input
+                className="discount-input"
+                type="number"
+                min={0}
+                max={tipType === "percent" ? 100 : undefined}
+                inputMode="decimal"
+                placeholder={tipType === "percent" ? "เช่น 10" : "เช่น 20"}
+                value={tipValue}
+                onChange={(e) => setTipValue(e.target.value)}
+              />
+            )}
+          </div>
 
           <div className="discount-box">
             <p className="discount-label">ส่วนลด</p>
@@ -931,6 +984,12 @@ export default function PosApp() {
                 <div className="order-sum-row is-discount">
                   <span>ส่วนลด</span>
                   <span>−{formatSickles(extra)}</span>
+                </div>
+              )}
+              {tipAmt > 0 && (
+                <div className="order-sum-row is-tip">
+                  <span>ทิป</span>
+                  <span>+{formatSickles(tipAmt)}</span>
                 </div>
               )}
             </div>

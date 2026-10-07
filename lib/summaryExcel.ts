@@ -14,8 +14,10 @@ export type SummaryExport = {
     lines: BillLine[];
     total: number;
     discountAmt: number;
+    tipAmt?: number;
     customerName?: string;
     staffName?: string;
+    cashierName?: string;
     tableNo?: string;
   }[];
 };
@@ -74,26 +76,29 @@ export function summaryWorkbook(data: SummaryExport) {
   ];
 
   const bills: (string | number)[][] = [
-    ["เวลา", "โต๊ะ", "ลูกค้า", "พนักงาน", "รายการ", "ส่วนลด", "ยอดสุทธิ"],
+    ["เวลา", "โต๊ะ", "แขก", "ผู้เสิร์ฟ", "ผู้คิดเงิน", "รายการ", "ส่วนลด", "ทิป", "ยอดสุทธิ"],
     ...data.orders.map((order) => [
       when(order.at),
       order.tableNo ?? "",
       order.customerName ?? "",
       order.staffName ?? "",
+      order.cashierName ?? "",
       order.lines.map(lineLabel).join(", "),
       order.discountAmt,
+      order.tipAmt ?? 0,
       order.total,
     ]),
   ];
 
   const lines: (string | number)[][] = [
-    ["เวลา", "โต๊ะ", "ลูกค้า", "พนักงาน", "สินค้า", "รายละเอียด", "จำนวน", "ราคา", "รวม"],
+    ["เวลา", "โต๊ะ", "แขก", "ผู้เสิร์ฟ", "ผู้คิดเงิน", "สินค้า", "รายละเอียด", "จำนวน", "ราคา", "รวม"],
     ...data.orders.flatMap((order) =>
       order.lines.map((line) => [
         when(order.at),
         order.tableNo ?? "",
         order.customerName ?? "",
         order.staffName ?? "",
+        order.cashierName ?? "",
         line.name,
         lineDetail(line.id) ?? "",
         line.qty,

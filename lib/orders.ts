@@ -14,11 +14,16 @@ export type SavedOrder = {
   subtotal: number;
   discount: Discount;
   discountAmt: number;
+  /** Optional — tip added on top of the discounted total */
+  tip?: Discount;
+  tipAmt?: number;
   total: number;
   /** Optional — customer name */
   customerName?: string;
-  /** Optional — cashier / staff name */
+  /** Optional — who served */
   staffName?: string;
+  /** Optional — who took payment */
+  cashierName?: string;
   /** Optional — table number */
   tableNo?: string;
   /** Soft-cancelled bill */

@@ -11,15 +11,16 @@ import {
   summarizeOrders,
   type SavedOrder,
 } from "@/lib/orders";
-import { staffBoard, type StaffStatus } from "@/lib/staff";
+import { STAFF_ROSTER, staffBoard, type StaffStatus } from "@/lib/staff";
 
 function billText(order: SavedOrder): string {
   const tick = (value: string) => value.replaceAll("`", "'");
   const who = [
     order.voided ? "**ยกเลิกแล้ว**" : null,
     order.tableNo ? `**โต๊ะ** \`${tick(order.tableNo)}\`` : null,
-    order.customerName ? `**ลูกค้า** \`${tick(order.customerName)}\`` : null,
-    order.staffName ? `**โดย** \`${tick(order.staffName)}\`` : null,
+    order.customerName ? `**แขก** \`${tick(order.customerName)}\`` : null,
+    order.staffName ? `**ผู้เสิร์ฟ** \`${tick(order.staffName)}\`` : null,
+    order.cashierName ? `**ผู้คิดเงิน** \`${tick(order.cashierName)}\`` : null,
   ].filter((line) => line !== null);
   const items = order.lines.map((line) => {
     const detail = lineDetail(line.id);
@@ -37,7 +38,9 @@ export default function OrdersPage() {
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [staff, setStaff] = useState<StaffStatus[]>(() => staffBoard([]));
+  const [staff, setStaff] = useState<StaffStatus[]>(() =>
+    staffBoard(STAFF_ROSTER, []),
+  );
   const requestId = useRef(0);
   // Bumped around a status save so an in-flight board reload can't restore the old value.
   const staffEpoch = useRef(0);
@@ -292,7 +295,10 @@ export default function OrdersPage() {
                       {order.voided ? "ยกเลิกแล้ว" : formatSickles(order.total)}
                     </strong>
                   </div>
-                  {(order.customerName || order.tableNo) && (
+                  {(order.customerName ||
+                    order.staffName ||
+                    order.cashierName ||
+                    order.tableNo) && (
                     <div className="sales-people">
                       {order.tableNo ? (
                         <span className="sales-chip sales-chip--table">
@@ -302,8 +308,20 @@ export default function OrdersPage() {
                       ) : null}
                       {order.customerName ? (
                         <span className="sales-chip sales-chip--customer">
-                          <span className="sales-chip-label">ลูกค้า</span>
+                          <span className="sales-chip-label">แขก</span>
                           {order.customerName}
+                        </span>
+                      ) : null}
+                      {order.staffName ? (
+                        <span className="sales-chip sales-chip--staff">
+                          <span className="sales-chip-label">ผู้เสิร์ฟ</span>
+                          {order.staffName}
+                        </span>
+                      ) : null}
+                      {order.cashierName ? (
+                        <span className="sales-chip sales-chip--pay">
+                          <span className="sales-chip-label">ผู้คิดเงิน</span>
+                          {order.cashierName}
                         </span>
                       ) : null}
                     </div>
@@ -330,6 +348,11 @@ export default function OrdersPage() {
                   {order.discountAmt > 0 && !order.voided && (
                     <p className="sales-discount">
                       ส่วนลด −{formatSickles(order.discountAmt)}
+                    </p>
+                  )}
+                  {(order.tipAmt ?? 0) > 0 && !order.voided && (
+                    <p className="sales-tip">
+                      ทิป +{formatSickles(order.tipAmt ?? 0)}
                     </p>
                   )}
                   <div className="sales-card-actions">

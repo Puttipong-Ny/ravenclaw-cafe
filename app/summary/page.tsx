@@ -13,8 +13,10 @@ type Bill = {
   lines: BillLine[];
   total: number;
   discountAmt: number;
+  tipAmt?: number;
   customerName?: string;
   staffName?: string;
+  cashierName?: string;
   tableNo?: string;
 };
 
@@ -203,7 +205,7 @@ export default function SummaryPage() {
                     </time>
                     <strong className="sales-total">{formatSickles(o.total)}</strong>
                   </div>
-                  {(o.customerName || o.staffName || o.tableNo) && (
+                  {(o.customerName || o.staffName || o.cashierName || o.tableNo) && (
                     <div className="sales-people">
                       {o.tableNo ? (
                         <span className="sales-chip sales-chip--table">
@@ -213,14 +215,20 @@ export default function SummaryPage() {
                       ) : null}
                       {o.customerName ? (
                         <span className="sales-chip sales-chip--customer">
-                          <span className="sales-chip-label">ลูกค้า</span>
+                          <span className="sales-chip-label">แขก</span>
                           {o.customerName}
                         </span>
                       ) : null}
                       {o.staffName ? (
                         <span className="sales-chip sales-chip--staff">
-                          <span className="sales-chip-label">โดย</span>
+                          <span className="sales-chip-label">ผู้เสิร์ฟ</span>
                           {o.staffName}
+                        </span>
+                      ) : null}
+                      {o.cashierName ? (
+                        <span className="sales-chip sales-chip--pay">
+                          <span className="sales-chip-label">ผู้คิดเงิน</span>
+                          {o.cashierName}
                         </span>
                       ) : null}
                     </div>
@@ -248,6 +256,9 @@ export default function SummaryPage() {
                     <p className="sales-discount">
                       ส่วนลด −{formatSickles(o.discountAmt)}
                     </p>
+                  )}
+                  {(o.tipAmt ?? 0) > 0 && (
+                    <p className="sales-tip">ทิป +{formatSickles(o.tipAmt ?? 0)}</p>
                   )}
                 </li>
               ))}

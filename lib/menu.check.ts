@@ -56,6 +56,23 @@ const mixed = tallyOrder(
   { type: "none", value: 0 },
 );
 assert.equal(mixed.total, 10300);
+assert.equal(mixed.tipAmt, 0);
+
+const tipped = tallyOrder(
+  [{ id: "set-a", price: 300, qty: 1 }],
+  { type: "amount", value: 50 },
+  { type: "percent", value: 10 },
+);
+assert.equal(tipped.tipAmt, 25);
+assert.equal(tipped.total, 275);
+
+const flatTip = tallyOrder(
+  [{ id: "set-a", price: 300, qty: 1 }],
+  { type: "none", value: 0 },
+  { type: "amount", value: 40 },
+);
+assert.equal(flatTip.tipAmt, 40);
+assert.equal(flatTip.total, 340);
 assert.deepEqual(lineContents("set-a", "Set A"), ["Cupcake", "Charm Tea"]);
 assert.deepEqual(lineContents("gone", "Fairy Tale"), ["Fairy Tale"]);
 assert.equal(lineMatchesQuery({ id: "set-a", name: "Set A" }, "cup"), true);
